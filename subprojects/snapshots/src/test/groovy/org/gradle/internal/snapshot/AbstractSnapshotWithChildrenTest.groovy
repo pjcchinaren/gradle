@@ -16,6 +16,7 @@
 
 package org.gradle.internal.snapshot
 
+import org.gradle.internal.vfs.SnapshotHierarchy
 import spock.lang.Specification
 
 import javax.annotation.Nullable
@@ -27,6 +28,18 @@ abstract class AbstractSnapshotWithChildrenTest<NODE extends FileSystemNode, CHI
     NODE initialRoot
     List<CHILD> children
     VfsRelativePath searchedPath
+
+    SnapshotHierarchy.SnapshotChangeListener changeListener = new SnapshotHierarchy.SnapshotChangeListener() {
+        @Override
+        void snapshotRemoved(CompleteFileSystemLocationSnapshot snapshot) {
+
+        }
+
+        @Override
+        void snapshotAdded(CompleteFileSystemLocationSnapshot snapshot) {
+
+        }
+    }
 
     /**
      * The child, if any, which has a common prefix with the selected path, i.e. (absolutePath/offset).
@@ -97,7 +110,7 @@ abstract class AbstractSnapshotWithChildrenTest<NODE extends FileSystemNode, CHI
 
     def invalidateDescendantOfSelectedChild(@Nullable FileSystemNode invalidatedChild) {
         def descendantOffset = selectedChild.pathToParent.length() + 1
-        1 * selectedChild.invalidate(searchedPath.suffixStartingFrom(descendantOffset), CASE_SENSITIVE) >> Optional.ofNullable(invalidatedChild)
+        1 * selectedChild.invalidate(searchedPath.suffixStartingFrom(descendantOffset), CASE_SENSITIVE, changeListener) >> Optional.ofNullable(invalidatedChild)
     }
 
     @SuppressWarnings("GrMethodMayBeStatic")

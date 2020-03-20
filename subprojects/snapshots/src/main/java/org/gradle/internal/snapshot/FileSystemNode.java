@@ -16,6 +16,8 @@
 
 package org.gradle.internal.snapshot;
 
+import org.gradle.internal.vfs.SnapshotHierarchy;
+
 import javax.annotation.Nullable;
 import java.util.Optional;
 
@@ -49,7 +51,7 @@ public interface FileSystemNode {
     /**
      * Invalidates part of the node.
      */
-    Optional<FileSystemNode> invalidate(VfsRelativePath relativePath, CaseSensitivity caseSensitivity);
+    Optional<FileSystemNode> invalidate(VfsRelativePath relativePath, CaseSensitivity caseSensitivity, SnapshotHierarchy.SnapshotChangeListener changeListener);
 
     /**
      * The path to the parent snapshot or the root of the file system.

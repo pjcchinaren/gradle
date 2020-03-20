@@ -74,9 +74,9 @@ public class DefaultSnapshotHierarchy implements SnapshotHierarchy {
     }
 
     @Override
-    public SnapshotHierarchy invalidate(String absolutePath) {
+    public SnapshotHierarchy invalidate(String absolutePath, SnapshotChangeListener changeListener) {
         VfsRelativePath relativePath = VfsRelativePath.of(absolutePath);
-        return invalidateSingleChild(rootNode, relativePath, caseSensitivity)
+        return invalidateSingleChild(rootNode, relativePath, caseSensitivity, changeListener)
             .<SnapshotHierarchy>map(newRootNode -> new DefaultSnapshotHierarchy(newRootNode, caseSensitivity))
             .orElse(empty());
     }
@@ -119,7 +119,7 @@ public class DefaultSnapshotHierarchy implements SnapshotHierarchy {
         }
 
         @Override
-        public SnapshotHierarchy invalidate(String absolutePath) {
+        public SnapshotHierarchy invalidate(String absolutePath, SnapshotChangeListener changeListener) {
             return this;
         }
 

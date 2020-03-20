@@ -166,7 +166,7 @@ public class DefaultVirtualFileSystem extends AbstractVirtualFileSystem {
         root.updateAndGet(root -> {
             SnapshotHierarchy result = root;
             for (String location : locations) {
-                result = result.invalidate(location);
+                result = result.invalidate(location, null);
             }
             return result;
         });

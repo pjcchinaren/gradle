@@ -53,7 +53,7 @@ public interface SnapshotHierarchy {
      * Returns a hierarchy without any information at the absolute path.
      */
     @CheckReturnValue
-    SnapshotHierarchy invalidate(String absolutePath);
+    SnapshotHierarchy invalidate(String absolutePath, SnapshotChangeListener changeListener);
 
     /**
      * The empty hierarchy.
@@ -65,5 +65,10 @@ public interface SnapshotHierarchy {
 
     interface SnapshotVisitor {
         void visitSnapshot(CompleteFileSystemLocationSnapshot snapshot, boolean rootOfCompleteHierarchy);
+    }
+
+    interface SnapshotChangeListener {
+        void snapshotRemoved(CompleteFileSystemLocationSnapshot snapshot);
+        void snapshotAdded(CompleteFileSystemLocationSnapshot snapshot);
     }
 }

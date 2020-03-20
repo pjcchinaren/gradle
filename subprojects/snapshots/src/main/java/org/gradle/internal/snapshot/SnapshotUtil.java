@@ -18,6 +18,7 @@ package org.gradle.internal.snapshot;
 
 import com.google.common.collect.ImmutableList;
 import org.gradle.internal.file.FileType;
+import org.gradle.internal.vfs.SnapshotHierarchy;
 
 import java.util.List;
 import java.util.Optional;
@@ -122,11 +123,11 @@ public class SnapshotUtil {
         return metadataSnapshot.getType() != FileType.Missing;
     }
 
-    public static Optional<FileSystemNode> invalidateSingleChild(FileSystemNode child, VfsRelativePath relativePath, CaseSensitivity caseSensitivity) {
+    public static Optional<FileSystemNode> invalidateSingleChild(FileSystemNode child, VfsRelativePath relativePath, CaseSensitivity caseSensitivity, SnapshotHierarchy.SnapshotChangeListener changeListener) {
         return handlePrefix(child.getPathToParent(), relativePath, caseSensitivity, new DescendantHandler<Optional<FileSystemNode>>() {
             @Override
             public Optional<FileSystemNode> handleDescendant() {
-                return child.invalidate(relativePath.fromChild(child.getPathToParent()), caseSensitivity);
+                return child.invalidate(relativePath.fromChild(child.getPathToParent()), caseSensitivity, changeListener);
             }
 
             @Override

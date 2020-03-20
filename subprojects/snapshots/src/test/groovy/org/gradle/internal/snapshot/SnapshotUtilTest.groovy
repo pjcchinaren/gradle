@@ -16,6 +16,7 @@
 
 package org.gradle.internal.snapshot
 
+import org.gradle.internal.vfs.SnapshotHierarchy
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -23,6 +24,18 @@ import static org.gradle.internal.snapshot.CaseSensitivity.CASE_SENSITIVE
 
 @Unroll
 class SnapshotUtilTest extends Specification {
+
+    SnapshotHierarchy.SnapshotChangeListener changeListener = new SnapshotHierarchy.SnapshotChangeListener() {
+        @Override
+        void snapshotRemoved(CompleteFileSystemLocationSnapshot snapshot) {
+
+        }
+
+        @Override
+        void snapshotAdded(CompleteFileSystemLocationSnapshot snapshot) {
+
+        }
+    }
 
     def "getSnapshotFromChild returns child when queried at the same path #absolutePath"() {
         def child = mockChild(pathToParent)
@@ -85,10 +98,10 @@ class SnapshotUtilTest extends Specification {
         def relativePath = VfsRelativePath.of(absolutePath).suffixStartingFrom(suffixStart)
 
         when:
-        def resultRoot = SnapshotUtil.invalidateSingleChild(child, relativePath, CASE_SENSITIVE).get()
+        def resultRoot = SnapshotUtil.invalidateSingleChild(child, relativePath, CASE_SENSITIVE, changeListener).get()
         then:
         resultRoot.is invalidatedChild
-        1 * child.invalidate(relativePath.suffixStartingFrom(pathToParent.length() + childOffset), CASE_SENSITIVE) >> Optional.of(invalidatedChild)
+        1 * child.invalidate(relativePath.suffixStartingFrom(pathToParent.length() + childOffset), CASE_SENSITIVE, changeListener) >> Optional.of(invalidatedChild)
 
         where:
         absolutePath                    | suffixStart               | pathToParent | childOffset

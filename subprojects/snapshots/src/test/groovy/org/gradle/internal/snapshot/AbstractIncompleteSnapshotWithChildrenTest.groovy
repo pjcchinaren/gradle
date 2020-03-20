@@ -32,7 +32,7 @@ abstract class AbstractIncompleteSnapshotWithChildrenTest<T extends FileSystemNo
         setupTest(vfsSpec)
 
         expect:
-        initialRoot.invalidate(searchedPath, CASE_SENSITIVE).get() is initialRoot
+        initialRoot.invalidate(searchedPath, CASE_SENSITIVE, changeListener).get() is initialRoot
 
         where:
         vfsSpec << (NO_COMMON_PREFIX + COMMON_PREFIX).findAll { allowEmptyChildren || !it.childPaths.empty }
