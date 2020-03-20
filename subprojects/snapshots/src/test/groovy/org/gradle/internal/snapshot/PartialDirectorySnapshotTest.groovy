@@ -47,6 +47,8 @@ class PartialDirectorySnapshotTest extends AbstractIncompleteSnapshotWithChildre
         then:
         resultRoot.children == childrenWithSelectedChildRemoved()
         isSameNodeType(resultRoot)
+        removedSnapshots == [selectedChild]
+        addedSnapshots.empty
         interaction { noMoreInteractions() }
 
         where:
@@ -62,6 +64,9 @@ class PartialDirectorySnapshotTest extends AbstractIncompleteSnapshotWithChildre
         then:
         resultRoot.children == childrenWithSelectedChildReplacedBy(invalidatedChild)
         isSameNodeType(resultRoot)
+        removedSnapshots.empty
+        addedSnapshots.empty
+
         interaction {
             invalidateDescendantOfSelectedChild(invalidatedChild)
             noMoreInteractions()
@@ -79,6 +84,8 @@ class PartialDirectorySnapshotTest extends AbstractIncompleteSnapshotWithChildre
         then:
         resultRoot.children == childrenWithSelectedChildRemoved()
         isSameNodeType(resultRoot)
+        removedSnapshots.empty
+        addedSnapshots.empty
         interaction {
             invalidateDescendantOfSelectedChild(null)
             noMoreInteractions()

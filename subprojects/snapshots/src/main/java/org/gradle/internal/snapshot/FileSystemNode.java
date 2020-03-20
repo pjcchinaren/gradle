@@ -51,7 +51,7 @@ public interface FileSystemNode {
     /**
      * Invalidates part of the node.
      */
-    Optional<FileSystemNode> invalidate(VfsRelativePath relativePath, CaseSensitivity caseSensitivity, SnapshotHierarchy.SnapshotChangeListener changeListener);
+    Optional<FileSystemNode> invalidate(VfsRelativePath relativePath, CaseSensitivity caseSensitivity, SnapshotHierarchy.ChangeListener changeListener);
 
     /**
      * The path to the parent snapshot or the root of the file system.

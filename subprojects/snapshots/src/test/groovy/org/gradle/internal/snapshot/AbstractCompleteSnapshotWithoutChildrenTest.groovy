@@ -28,15 +28,18 @@ abstract class AbstractCompleteSnapshotWithoutChildrenTest<T extends CompleteFil
 
     T initialRoot = createInitialRootNode("/some/absolute/path")
 
-    SnapshotHierarchy.SnapshotChangeListener changeListener = new SnapshotHierarchy.SnapshotChangeListener() {
-        @Override
-        void snapshotRemoved(CompleteFileSystemLocationSnapshot snapshot) {
+    List<FileSystemNode> removedSnapshots = []
+    List<FileSystemNode> addedSnapshots = []
 
+    SnapshotHierarchy.ChangeListener changeListener = new SnapshotHierarchy.ChangeListener() {
+        @Override
+        void nodeRemoved(FileSystemNode snapshot) {
+            removedSnapshots.add(snapshot)
         }
 
         @Override
-        void snapshotAdded(CompleteFileSystemLocationSnapshot snapshot) {
-
+        void nodeAdded(FileSystemNode snapshot) {
+            addedSnapshots.add(snapshot)
         }
     }
 
@@ -50,6 +53,8 @@ abstract class AbstractCompleteSnapshotWithoutChildrenTest<T extends CompleteFil
     def "invalidate removes the node"() {
         expect:
         initialRoot.invalidate(childAbsolutePath("some/child"), CASE_SENSITIVE, changeListener) == Optional.empty()
+        removedSnapshots == [initialRoot]
+        addedSnapshots.empty
     }
 
     def "getSnapshot returns itself"() {

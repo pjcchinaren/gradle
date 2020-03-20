@@ -29,15 +29,18 @@ abstract class AbstractSnapshotWithChildrenTest<NODE extends FileSystemNode, CHI
     List<CHILD> children
     VfsRelativePath searchedPath
 
-    SnapshotHierarchy.SnapshotChangeListener changeListener = new SnapshotHierarchy.SnapshotChangeListener() {
-        @Override
-        void snapshotRemoved(CompleteFileSystemLocationSnapshot snapshot) {
+    List<FileSystemNode> removedSnapshots = []
+    List<FileSystemNode> addedSnapshots = []
 
+    SnapshotHierarchy.ChangeListener changeListener = new SnapshotHierarchy.ChangeListener() {
+        @Override
+        void nodeRemoved(FileSystemNode snapshot) {
+            removedSnapshots.add(snapshot)
         }
 
         @Override
-        void snapshotAdded(CompleteFileSystemLocationSnapshot snapshot) {
-
+        void nodeAdded(FileSystemNode snapshot) {
+            addedSnapshots.add(snapshot)
         }
     }
 

@@ -90,20 +90,32 @@ public class CompleteDirectorySnapshot extends AbstractCompleteFileSystemLocatio
     }
 
     @Override
-    public Optional<FileSystemNode> invalidate(VfsRelativePath relativePath, CaseSensitivity caseSensitivity, SnapshotHierarchy.SnapshotChangeListener changeListener) {
+    public Optional<FileSystemNode> invalidate(VfsRelativePath relativePath, CaseSensitivity caseSensitivity, SnapshotHierarchy.ChangeListener changeListener) {
         return SnapshotUtil.handleChildren(children, relativePath, caseSensitivity, new SnapshotUtil.ChildHandler<Optional<FileSystemNode>>() {
             @Override
             public Optional<FileSystemNode> handleNewChild(int insertBefore) {
+                changeListener.nodeRemoved(CompleteDirectorySnapshot.this);
+                children.forEach(changeListener::nodeAdded);
                 return Optional.of(new PartialDirectorySnapshot(getPathToParent(), children));
             }
 
             @Override
             public Optional<FileSystemNode> handleChildOfExisting(int childIndex) {
+                changeListener.nodeRemoved(CompleteDirectorySnapshot.this);
                 CompleteFileSystemLocationSnapshot foundChild = children.get(childIndex);
                 int childPathLength = foundChild.getPathToParent().length();
-                Optional<FileSystemNode> invalidated = childPathLength == relativePath.length()
+                boolean completeChildRemoved = childPathLength == relativePath.length();
+                if (completeChildRemoved) {
+                    changeListener.nodeRemoved(foundChild);
+                }
+                Optional<FileSystemNode> invalidated = completeChildRemoved
                     ? Optional.empty()
                     : foundChild.invalidate(relativePath.suffixStartingFrom(childPathLength + 1), caseSensitivity, changeListener);
+                children.forEach(child -> {
+                    if (child != foundChild) {
+                        changeListener.nodeAdded(child);
+                    }
+                });
                 return Optional.of(new PartialDirectorySnapshot(getPathToParent(), getChildren(childIndex, invalidated)));
             }
 

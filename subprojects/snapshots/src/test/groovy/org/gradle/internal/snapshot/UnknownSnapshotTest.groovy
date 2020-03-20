@@ -46,6 +46,8 @@ class UnknownSnapshotTest extends AbstractIncompleteSnapshotWithChildrenTest<Unk
         then:
         resultRoot.children == childrenWithSelectedChildRemoved()
         isSameNodeType(resultRoot)
+        removedSnapshots == [selectedChild]
+        addedSnapshots.empty
         interaction { noMoreInteractions() }
 
         where:
@@ -59,6 +61,8 @@ class UnknownSnapshotTest extends AbstractIncompleteSnapshotWithChildrenTest<Unk
         def resultRoot = initialRoot.invalidate(searchedPath, CASE_SENSITIVE, changeListener)
         then:
         !resultRoot.present
+        removedSnapshots == [selectedChild]
+        addedSnapshots.empty
         interaction { noMoreInteractions() }
 
         where:
@@ -74,6 +78,8 @@ class UnknownSnapshotTest extends AbstractIncompleteSnapshotWithChildrenTest<Unk
         then:
         resultRoot.children == childrenWithSelectedChildReplacedBy(invalidatedChild)
         isSameNodeType(resultRoot)
+        removedSnapshots.empty
+        addedSnapshots.empty
         interaction {
             invalidateDescendantOfSelectedChild(invalidatedChild)
             noMoreInteractions()
@@ -91,6 +97,8 @@ class UnknownSnapshotTest extends AbstractIncompleteSnapshotWithChildrenTest<Unk
         then:
         resultRoot.children == childrenWithSelectedChildRemoved()
         isSameNodeType(resultRoot)
+        removedSnapshots.empty
+        addedSnapshots.empty
         interaction {
             invalidateDescendantOfSelectedChild(null)
             noMoreInteractions()
@@ -107,6 +115,8 @@ class UnknownSnapshotTest extends AbstractIncompleteSnapshotWithChildrenTest<Unk
         def resultRoot = initialRoot.invalidate(searchedPath, CASE_SENSITIVE, changeListener)
         then:
         !resultRoot.present
+        removedSnapshots.empty
+        addedSnapshots.empty
         interaction {
             invalidateDescendantOfSelectedChild(null)
             noMoreInteractions()

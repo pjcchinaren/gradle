@@ -43,6 +43,8 @@ class CompleteDirectorySnapshotTest extends AbstractSnapshotWithChildrenTest<Fil
         resultRoot instanceof PartialDirectorySnapshot
         resultRoot.children == children
         resultRoot.pathToParent == initialRoot.pathToParent
+        removedSnapshots == [initialRoot.getSnapshot().get()]
+        addedSnapshots == children
         interaction { noMoreInteractions() }
 
         where:
@@ -58,6 +60,8 @@ class CompleteDirectorySnapshotTest extends AbstractSnapshotWithChildrenTest<Fil
         resultRoot instanceof PartialDirectorySnapshot
         resultRoot.children == childrenWithSelectedChildRemoved()
         resultRoot.pathToParent == initialRoot.pathToParent
+        removedSnapshots == [initialRoot.getSnapshot().get(), selectedChild]
+        addedSnapshots == childrenWithSelectedChildRemoved()
         interaction { noMoreInteractions() }
 
         where:
@@ -74,6 +78,8 @@ class CompleteDirectorySnapshotTest extends AbstractSnapshotWithChildrenTest<Fil
         resultRoot instanceof PartialDirectorySnapshot
         resultRoot.children == childrenWithSelectedChildReplacedBy(invalidatedChild)
         resultRoot.pathToParent == initialRoot.pathToParent
+        removedSnapshots == [initialRoot.getSnapshot().get()]
+        addedSnapshots == childrenWithSelectedChildRemoved()
 
         interaction {
             invalidateDescendantOfSelectedChild(invalidatedChild)
@@ -93,6 +99,8 @@ class CompleteDirectorySnapshotTest extends AbstractSnapshotWithChildrenTest<Fil
         resultRoot instanceof PartialDirectorySnapshot
         resultRoot.children == childrenWithSelectedChildRemoved()
         resultRoot.pathToParent == initialRoot.pathToParent
+        removedSnapshots == [initialRoot.getSnapshot().get()]
+        addedSnapshots == childrenWithSelectedChildRemoved()
 
         interaction {
             invalidateDescendantOfSelectedChild(null)

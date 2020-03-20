@@ -123,7 +123,7 @@ public class SnapshotUtil {
         return metadataSnapshot.getType() != FileType.Missing;
     }
 
-    public static Optional<FileSystemNode> invalidateSingleChild(FileSystemNode child, VfsRelativePath relativePath, CaseSensitivity caseSensitivity, SnapshotHierarchy.SnapshotChangeListener changeListener) {
+    public static Optional<FileSystemNode> invalidateSingleChild(FileSystemNode child, VfsRelativePath relativePath, CaseSensitivity caseSensitivity, SnapshotHierarchy.ChangeListener changeListener) {
         return handlePrefix(child.getPathToParent(), relativePath, caseSensitivity, new DescendantHandler<Optional<FileSystemNode>>() {
             @Override
             public Optional<FileSystemNode> handleDescendant() {
@@ -132,11 +132,13 @@ public class SnapshotUtil {
 
             @Override
             public Optional<FileSystemNode> handleParent() {
+                changeListener.nodeRemoved(child);
                 return Optional.empty();
             }
 
             @Override
             public Optional<FileSystemNode> handleSame() {
+                changeListener.nodeRemoved(child);
                 return Optional.empty();
             }
 
