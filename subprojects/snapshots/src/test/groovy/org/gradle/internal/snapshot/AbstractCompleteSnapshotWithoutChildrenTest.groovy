@@ -47,7 +47,9 @@ abstract class AbstractCompleteSnapshotWithoutChildrenTest<T extends CompleteFil
         def snapshot = Mock(MetadataSnapshot)
 
         expect:
-        initialRoot.store(childAbsolutePath("some/child"), CASE_SENSITIVE, snapshot) == initialRoot
+        initialRoot.store(childAbsolutePath("some/child"), CASE_SENSITIVE, snapshot, changeListener) == initialRoot
+        removedSnapshots.empty
+        addedSnapshots.empty
     }
 
     def "invalidate removes the node"() {

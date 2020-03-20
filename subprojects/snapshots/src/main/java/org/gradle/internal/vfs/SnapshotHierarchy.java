@@ -48,7 +48,7 @@ public interface SnapshotHierarchy {
      * Returns a hierarchy augmented by the information of the snapshot at the absolute path.
      */
     @CheckReturnValue
-    SnapshotHierarchy store(String absolutePath, MetadataSnapshot snapshot);
+    SnapshotHierarchy store(String absolutePath, MetadataSnapshot snapshot, ChangeListener changeListener);
 
     /**
      * Returns a hierarchy without any information at the absolute path.
@@ -69,6 +69,16 @@ public interface SnapshotHierarchy {
     }
 
     interface ChangeListener {
+        ChangeListener NOOP = new ChangeListener() {
+            @Override
+            public void nodeRemoved(FileSystemNode snapshot) {
+            }
+
+            @Override
+            public void nodeAdded(FileSystemNode snapshot) {
+            }
+        };
+
         void nodeRemoved(FileSystemNode snapshot);
         void nodeAdded(FileSystemNode snapshot);
     }

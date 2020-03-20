@@ -47,13 +47,17 @@ abstract class AbstractIncompleteSnapshotWithChildrenTest<T extends FileSystemNo
         def newGrandChild = mockChild(newPathToParent)
 
         when:
-        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshot)
+        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshot, changeListener)
         AbstractIncompleteSnapshotWithChildren newChild = getNodeWithIndexOfSelectedChild(resultRoot.children) as AbstractIncompleteSnapshotWithChildren
         then:
         resultRoot.children == childrenWithSelectedChildReplacedBy(newChild)
         newChild.pathToParent == commonPrefix
         newChild.children == sortedChildren(newGrandChild, selectedChild)
         newChild.snapshot.get().type == FileType.Directory
+
+        addedSnapshots == [newGrandChild]
+        removedSnapshots.empty
+
         1 * snapshot.asFileSystemNode(newPathToParent) >> newGrandChild
         1 * selectedChild.snapshot >> Optional.empty()
         1 * selectedChild.withPathToParent(selectedChildPathFromCommonPrefix) >> selectedChild
@@ -73,13 +77,17 @@ abstract class AbstractIncompleteSnapshotWithChildrenTest<T extends FileSystemNo
         def newGrandChild = mockChild(newPathToParent)
 
         when:
-        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshot)
+        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshot, changeListener)
         AbstractIncompleteSnapshotWithChildren newChild = getNodeWithIndexOfSelectedChild(resultRoot.children) as AbstractIncompleteSnapshotWithChildren
         then:
         resultRoot.children == childrenWithSelectedChildReplacedBy(newChild)
         newChild.pathToParent == commonPrefix
         newChild.children == sortedChildren(newGrandChild, selectedChild)
         !newChild.snapshot.present
+
+        addedSnapshots == [newGrandChild]
+        removedSnapshots.empty
+
         1 * snapshot.asFileSystemNode(newPathToParent) >> newGrandChild
         1 * selectedChild.snapshot >> Optional.empty()
         1 * selectedChild.withPathToParent(selectedChildPathFromCommonPrefix) >> selectedChild
@@ -97,10 +105,14 @@ abstract class AbstractIncompleteSnapshotWithChildrenTest<T extends FileSystemNo
         def newChild = mockChild(newPathToParent)
 
         when:
-        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshot)
+        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshot, changeListener)
         then:
         resultRoot.children == childrenWithAdditionalChild(newChild)
         isSameNodeType(resultRoot)
+
+        addedSnapshots == [newChild]
+        removedSnapshots.empty
+
         1 * snapshot.asFileSystemNode(newPathToParent) >> newChild
         interaction { noMoreInteractions() }
 
@@ -115,10 +127,14 @@ abstract class AbstractIncompleteSnapshotWithChildrenTest<T extends FileSystemNo
         def parent = mockChild(newPathToParent)
 
         when:
-        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshot)
+        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshot, changeListener)
         then:
         resultRoot.children == childrenWithSelectedChildReplacedBy(parent)
         isSameNodeType(resultRoot)
+
+        addedSnapshots == [parent]
+        removedSnapshots == [selectedChild]
+
         1 * snapshot.asFileSystemNode(newPathToParent) >> parent
         interaction { noMoreInteractions() }
 
@@ -133,10 +149,14 @@ abstract class AbstractIncompleteSnapshotWithChildrenTest<T extends FileSystemNo
         def snapshotWithParent = mockChild(newPathToParent)
 
         when:
-        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshot)
+        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshot, changeListener)
         then:
         resultRoot.children == childrenWithSelectedChildReplacedBy(snapshotWithParent)
         isSameNodeType(resultRoot)
+
+        addedSnapshots == [snapshotWithParent]
+        removedSnapshots == [selectedChild]
+
         1 * snapshot.asFileSystemNode(newPathToParent) >> snapshotWithParent
         interaction { noMoreInteractions() }
 
@@ -149,10 +169,14 @@ abstract class AbstractIncompleteSnapshotWithChildrenTest<T extends FileSystemNo
         def snapshot = Mock(MetadataSnapshot)
 
         when:
-        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshot)
+        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshot, changeListener)
         then:
         resultRoot.children == children
         isSameNodeType(resultRoot)
+
+        addedSnapshots.empty
+        removedSnapshots.empty
+
         1 * selectedChild.getSnapshot() >> Optional.of(Mock(CompleteFileSystemLocationSnapshot))
         interaction {
             noMoreInteractions()
@@ -169,10 +193,14 @@ abstract class AbstractIncompleteSnapshotWithChildrenTest<T extends FileSystemNo
         def newNode = mockChild(newPathToParent)
 
         when:
-        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshot)
+        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshot, changeListener)
         then:
         isSameNodeType(resultRoot)
         resultRoot.children == childrenWithSelectedChildReplacedBy(newNode)
+
+        addedSnapshots == [newNode]
+        removedSnapshots == [selectedChild]
+
         1 * selectedChild.getSnapshot() >> Optional.of(Mock(MetadataSnapshot))
         interaction {
             1 * snapshot.asFileSystemNode(newPathToParent) >> newNode
@@ -189,10 +217,14 @@ abstract class AbstractIncompleteSnapshotWithChildrenTest<T extends FileSystemNo
         def updatedChildNode = mockChild(selectedChild.pathToParent)
 
         when:
-        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshotToStore)
+        def resultRoot = initialRoot.store(searchedPath, CASE_SENSITIVE, snapshotToStore, changeListener)
         then:
         initialRoot.class == resultRoot.class
         resultRoot.children == childrenWithSelectedChildReplacedBy(updatedChildNode)
+
+        addedSnapshots.empty
+        removedSnapshots.empty
+
         interaction {
             storeDescendantOfSelectedChild(snapshotToStore, updatedChildNode)
             noMoreInteractions()
@@ -204,7 +236,7 @@ abstract class AbstractIncompleteSnapshotWithChildrenTest<T extends FileSystemNo
 
     def storeDescendantOfSelectedChild(MetadataSnapshot snapshot, FileSystemNode updatedChild) {
         def descendantOffset = selectedChild.pathToParent.length() + 1
-        1 * selectedChild.store(searchedPath.suffixStartingFrom(descendantOffset), CASE_SENSITIVE, snapshot) >> updatedChild
+        1 * selectedChild.store(searchedPath.suffixStartingFrom(descendantOffset), CASE_SENSITIVE, snapshot, changeListener) >> updatedChild
     }
 
     def "querying the snapshot for non-existing child #vfsSpec.searchedPath finds nothings (#vfsSpec)"() {

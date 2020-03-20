@@ -68,9 +68,9 @@ public class DefaultSnapshotHierarchy implements SnapshotHierarchy {
     }
 
     @Override
-    public SnapshotHierarchy store(String absolutePath, MetadataSnapshot snapshot) {
+    public SnapshotHierarchy store(String absolutePath, MetadataSnapshot snapshot, ChangeListener changeListener) {
         VfsRelativePath relativePath = VfsRelativePath.of(absolutePath);
-        return new DefaultSnapshotHierarchy(storeSingleChild(rootNode, relativePath, caseSensitivity, snapshot), caseSensitivity);
+        return new DefaultSnapshotHierarchy(storeSingleChild(rootNode, relativePath, caseSensitivity, snapshot, changeListener), caseSensitivity);
     }
 
     @Override
@@ -114,7 +114,7 @@ public class DefaultSnapshotHierarchy implements SnapshotHierarchy {
         }
 
         @Override
-        public SnapshotHierarchy store(String absolutePath, MetadataSnapshot snapshot) {
+        public SnapshotHierarchy store(String absolutePath, MetadataSnapshot snapshot, ChangeListener changeListener) {
             return from(absolutePath, snapshot, caseSensitivity);
         }
 

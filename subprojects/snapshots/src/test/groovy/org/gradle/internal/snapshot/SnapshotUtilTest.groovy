@@ -79,10 +79,10 @@ class SnapshotUtilTest extends Specification {
         def relativePath = VfsRelativePath.of(absolutePath).suffixStartingFrom(suffixStart)
 
         when:
-        def resultRoot = SnapshotUtil.storeSingleChild(child, relativePath, CASE_SENSITIVE, snapshot)
+        def resultRoot = SnapshotUtil.storeSingleChild(child, relativePath, CASE_SENSITIVE, snapshot, changeListener)
         then:
         resultRoot.is updatedChild
-        1 * child.store(relativePath.suffixStartingFrom(pathToParent.length() + childOffset), CASE_SENSITIVE, snapshot) >> updatedChild
+        1 * child.store(relativePath.suffixStartingFrom(pathToParent.length() + childOffset), CASE_SENSITIVE, snapshot, changeListener) >> updatedChild
 
         where:
         absolutePath                    | suffixStart               | pathToParent | childOffset

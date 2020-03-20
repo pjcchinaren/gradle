@@ -115,7 +115,9 @@ class CompleteDirectorySnapshotTest extends AbstractSnapshotWithChildrenTest<Fil
         setupTest(vfsSpec)
 
         expect:
-        initialRoot.store(searchedPath, CASE_SENSITIVE, Mock(MetadataSnapshot)) is initialRoot
+        initialRoot.store(searchedPath, CASE_SENSITIVE, Mock(MetadataSnapshot), changeListener) is initialRoot
+        addedSnapshots.empty
+        removedSnapshots.empty
 
         where:
         vfsSpec << onlyDirectChildren(NO_COMMON_PREFIX + SAME_PATH + CHILD_IS_PREFIX)
