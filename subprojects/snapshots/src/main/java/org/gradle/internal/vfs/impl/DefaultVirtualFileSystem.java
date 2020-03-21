@@ -89,7 +89,7 @@ public class DefaultVirtualFileSystem extends AbstractVirtualFileSystem {
                         .orElseGet(() -> {
                             HashCode hashCode = hasher.hash(file, stat.getLength(), stat.getLastModified());
                             RegularFileSnapshot snapshot = new RegularFileSnapshot(location, file.getName(), hashCode, FileMetadata.from(stat));
-                            root.updateAndGet(root -> root.store(snapshot.getAbsolutePath(), snapshot, ChangeListener.NOOP));
+                            updateRoot((root, listener) -> root.store(snapshot.getAbsolutePath(), snapshot, listener));
                             return snapshot;
                         }).getHash());
                 return Optional.of(hash);
@@ -98,7 +98,7 @@ public class DefaultVirtualFileSystem extends AbstractVirtualFileSystem {
     }
 
     private void storeStatForMissingFile(String location) {
-        root.updateAndGet(root -> root.store(location, new MissingFileSnapshot(location), ChangeListener.NOOP));
+        updateRoot((root, listener) -> root.store(location, new MissingFileSnapshot(location), listener));
     }
 
     @Override
@@ -116,7 +116,7 @@ public class DefaultVirtualFileSystem extends AbstractVirtualFileSystem {
                             AtomicBoolean hasBeenFiltered = new AtomicBoolean(false);
                             CompleteFileSystemLocationSnapshot snapshot = directorySnapshotter.snapshot(location, filter.getAsDirectoryWalkerPredicate(), hasBeenFiltered);
                             if (!hasBeenFiltered.get()) {
-                                root.updateAndGet(root -> root.store(snapshot.getAbsolutePath(), snapshot, ChangeListener.NOOP));
+                                updateRoot((root, listener) -> root.store(snapshot.getAbsolutePath(), snapshot, listener));
                             }
                             return snapshot;
                         })
@@ -135,19 +135,27 @@ public class DefaultVirtualFileSystem extends AbstractVirtualFileSystem {
             case RegularFile:
                 HashCode hash = hasher.hash(file, stat.getLength(), stat.getLastModified());
                 RegularFileSnapshot regularFileSnapshot = new RegularFileSnapshot(location, file.getName(), hash, FileMetadata.from(stat));
-                root.updateAndGet(root -> root.store(regularFileSnapshot.getAbsolutePath(), regularFileSnapshot, ChangeListener.NOOP));
+                updateRoot((root, listener) -> root.store(regularFileSnapshot.getAbsolutePath(), regularFileSnapshot, listener));
                 return regularFileSnapshot;
             case Missing:
                 MissingFileSnapshot missingFileSnapshot = new MissingFileSnapshot(location);
-                root.updateAndGet(root -> root.store(missingFileSnapshot.getAbsolutePath(), missingFileSnapshot, ChangeListener.NOOP));
+                updateRoot((root, listener) -> root.store(missingFileSnapshot.getAbsolutePath(), missingFileSnapshot, listener));
                 return missingFileSnapshot;
             case Directory:
                 CompleteFileSystemLocationSnapshot directorySnapshot = directorySnapshotter.snapshot(location, null, new AtomicBoolean(false));
-                root.updateAndGet(root -> root.store(directorySnapshot.getAbsolutePath(), directorySnapshot, ChangeListener.NOOP));
+                updateRoot((root, listener) -> root.store(directorySnapshot.getAbsolutePath(), directorySnapshot, listener));
                 return directorySnapshot;
             default:
                 throw new UnsupportedOperationException();
         }
+    }
+
+    private void updateRoot(UpdateFunction updateFunction) {
+        root.updateAndGet(root -> updateFunction.update(root, ChangeListener.NOOP));
+    }
+
+    interface UpdateFunction {
+        SnapshotHierarchy update(SnapshotHierarchy current, ChangeListener changeListener);
     }
 
     @Override
@@ -164,10 +172,10 @@ public class DefaultVirtualFileSystem extends AbstractVirtualFileSystem {
 
     @Override
     public void update(Iterable<String> locations, Runnable action) {
-        root.updateAndGet(root -> {
+        updateRoot((root, listener) -> {
             SnapshotHierarchy result = root;
             for (String location : locations) {
-                result = result.invalidate(location, ChangeListener.NOOP);
+                result = result.invalidate(location, listener);
             }
             return result;
         });
@@ -176,12 +184,15 @@ public class DefaultVirtualFileSystem extends AbstractVirtualFileSystem {
 
     @Override
     public void invalidateAll() {
-        root.updateAndGet(SnapshotHierarchy::empty);
+        updateRoot((root, listener) ->
+            // TODO: Close watching here.
+            root.empty()
+        );
     }
 
     @Override
     public void updateWithKnownSnapshot(CompleteFileSystemLocationSnapshot snapshot) {
-        root.updateAndGet(root -> root.store(snapshot.getAbsolutePath(), snapshot, ChangeListener.NOOP));
+        updateRoot((root, listener) -> root.store(snapshot.getAbsolutePath(), snapshot, listener));
     }
 
     private static class StripedProducerGuard<T> {
