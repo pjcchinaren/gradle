@@ -29,8 +29,8 @@ import kotlin.reflect.KClass
 typealias StructuredMessageBuilder = StructuredMessage.Builder.() -> Unit
 
 
-fun IsolateContext.logPropertyWarning(action: String, message: StructuredMessageBuilder) {
-    logPropertyProblem(action, PropertyProblem.forWarning(trace, build(message)))
+fun IsolateContext.logPropertyWarning(action: String, exception: Throwable? = null, message: StructuredMessageBuilder) {
+    logPropertyProblem(action, PropertyProblem.forWarning(trace, build(message), exception))
 }
 
 
