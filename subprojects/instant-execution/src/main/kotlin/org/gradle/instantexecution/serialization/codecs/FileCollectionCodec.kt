@@ -31,6 +31,7 @@ import org.gradle.instantexecution.serialization.ReadContext
 import org.gradle.instantexecution.serialization.WriteContext
 import org.gradle.instantexecution.serialization.decodePreservingIdentity
 import org.gradle.instantexecution.serialization.encodePreservingIdentityOf
+import org.gradle.instantexecution.serialization.logPropertyWarning
 import java.io.File
 import java.util.concurrent.Callable
 
@@ -51,6 +52,11 @@ class FileCollectionCodec(
                     write(elements)
                 }
                 onFailure { ex ->
+                    logPropertyWarning("serialize", ex) {
+                        text("value ")
+                        reference(value.toString())
+                        text(" failed to visit file collection")
+                    }
                     write(BrokenValue(ex))
                 }
             }
