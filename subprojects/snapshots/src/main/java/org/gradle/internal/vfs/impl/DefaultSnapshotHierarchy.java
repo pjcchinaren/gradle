@@ -115,6 +115,9 @@ public class DefaultSnapshotHierarchy implements SnapshotHierarchy {
 
         @Override
         public SnapshotHierarchy store(String absolutePath, MetadataSnapshot snapshot, ChangeListener changeListener) {
+            // TODO: Remove the duplication here
+            VfsRelativePath relativePath = VfsRelativePath.of(absolutePath);
+            changeListener.nodeAdded(snapshot.asFileSystemNode(relativePath.getAsString()));
             return from(absolutePath, snapshot, caseSensitivity);
         }
 

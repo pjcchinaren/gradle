@@ -17,60 +17,44 @@
 package org.gradle.internal.vfs;
 
 import net.rubygrapefruit.platform.Native;
-import net.rubygrapefruit.platform.NativeException;
 import net.rubygrapefruit.platform.internal.jni.LinuxFileEventFunctions;
-import org.gradle.internal.snapshot.FileSystemNode;
+import org.gradle.internal.snapshot.CompleteFileSystemLocationSnapshot;
 import org.gradle.internal.vfs.watch.FileWatcherRegistry;
 import org.gradle.internal.vfs.watch.FileWatcherRegistryFactory;
-import org.gradle.internal.vfs.watch.WatchRootUtil;
-import org.gradle.internal.vfs.watch.WatchingNotSupportedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collection;
-import java.util.Set;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 public class LinuxFileWatcherRegistry extends AbstractEventDrivenFileWatcherRegistry {
     private static final Logger LOGGER = LoggerFactory.getLogger(LinuxFileWatcherRegistry.class);
 
-    public LinuxFileWatcherRegistry(Set<Path> watchRoots, ChangeHandler handler) {
+    public LinuxFileWatcherRegistry(Predicate<String> watchFilter, Collection<File> mustWatchDirectories, ChangeHandler handler) {
         super(
-            watchRoots,
             callback -> Native.get(LinuxFileEventFunctions.class).startWatcher(callback),
+            watchFilter,
+            mustWatchDirectories,
             handler
         );
     }
 
     @Override
-    public void nodeRemoved(FileSystemNode snapshot) {
+    protected void snapshotAdded(CompleteFileSystemLocationSnapshot snapshot) {
         // TODO
     }
 
     @Override
-    public void nodeAdded(FileSystemNode snapshot) {
+    protected void snapshotRemoved(CompleteFileSystemLocationSnapshot snapshot) {
         // TODO
     }
 
     public static class Factory implements FileWatcherRegistryFactory {
+
         @Override
-        public FileWatcherRegistry startWatching(SnapshotHierarchy root, Predicate<String> watchFilter, Collection<File> mustWatchDirectories, ChangeHandler handler) {
-            try {
-                Set<Path> directories = WatchRootUtil.resolveDirectoriesToWatch(root, watchFilter, mustWatchDirectories).stream()
-                    .map(Paths::get)
-                    .collect(Collectors.toSet());
-                LOGGER.warn("Watching {} directories to track changes between builds", directories.size());
-                return new LinuxFileWatcherRegistry(directories, handler);
-            } catch (NativeException e) {
-                if (e.getMessage().contains("Already watching path: ")) {
-                    throw new WatchingNotSupportedException("Unable to watch same file twice via different paths: " + e.getMessage(), e);
-                }
-                throw e;
-            }
+        public FileWatcherRegistry startWatcher(Predicate<String> watchFilter, Collection<File> mustWatchDirectories, ChangeHandler handler) {
+            return new LinuxFileWatcherRegistry(watchFilter, mustWatchDirectories, handler);
         }
     }
 }

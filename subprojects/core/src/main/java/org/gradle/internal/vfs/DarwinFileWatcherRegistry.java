@@ -16,10 +16,11 @@
 
 package org.gradle.internal.vfs;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.rubygrapefruit.platform.Native;
 import net.rubygrapefruit.platform.internal.jni.OsxFileEventFunctions;
-import org.gradle.internal.snapshot.FileSystemNode;
+import org.gradle.internal.snapshot.CompleteFileSystemLocationSnapshot;
 import org.gradle.internal.vfs.watch.FileWatcherRegistry;
 import org.gradle.internal.vfs.watch.FileWatcherRegistryFactory;
 import org.gradle.internal.vfs.watch.WatchRootUtil;
@@ -29,6 +30,8 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
@@ -36,53 +39,74 @@ import java.util.function.Predicate;
 public class DarwinFileWatcherRegistry extends AbstractEventDrivenFileWatcherRegistry {
     private static final Logger LOGGER = LoggerFactory.getLogger(DarwinFileWatcherRegistry.class);
 
-    public DarwinFileWatcherRegistry(Set<Path> watchRoots, ChangeHandler handler) {
+    private final Set<Path> watchedRoots = new HashSet<>();
+
+    public DarwinFileWatcherRegistry(Predicate<String> watchFilter, Collection<File> mustWatchDirectories, ChangeHandler handler) {
         super(
-            watchRoots,
             callback -> Native.get(OsxFileEventFunctions.class)
                 .startWatcher(
                     // TODO Figure out a good value for this
                     20, TimeUnit.MICROSECONDS,
                     callback
                 ),
+            watchFilter,
+            mustWatchDirectories,
             handler
         );
     }
 
     @Override
-    public void nodeRemoved(FileSystemNode snapshot) {
-        // TODO
+    protected void snapshotAdded(CompleteFileSystemLocationSnapshot snapshot) {
+        Set<String> mustWatchDirectoryPrefixes = ImmutableSet.copyOf(
+            getMustWatchDirectories().stream()
+                .map(path -> path.toString() + File.separator)
+                ::iterator
+        );
+        List<Path> alreadyWatchedDirectories = ImmutableList
+            .<Path>builder()
+            .addAll(getMustWatchDirectories())
+            .addAll(watchedRoots)
+            .build();
+        Set<String> directories = WatchRootUtil.resolveDirectoriesToWatch(
+            snapshot,
+            path -> getWatchFilter().test(path) || startsWithAnyPrefix(path, mustWatchDirectoryPrefixes),
+            alreadyWatchedDirectories
+        );
+        Set<Path> newWatchRoots = WatchRootUtil.resolveRootsToWatch(directories);
+        LOGGER.info("Watching {} directory hierarchies to track changes between builds in {} directories", newWatchRoots.size(), directories.size());
+        Set<Path> watchRootsToRemove = new HashSet<>(watchedRoots);
+        watchRootsToRemove.removeAll(newWatchRoots);
+        newWatchRoots.removeAll(watchedRoots);
+        newWatchRoots.stream()
+            .map(Path::toFile)
+            .forEach(getWatcher()::startWatching);
+        watchRootsToRemove.stream()
+            .map(Path::toFile)
+            .forEach(getWatcher()::stopWatching);
+        watchedRoots.addAll(newWatchRoots);
+        watchedRoots.removeAll(watchRootsToRemove);
+    }
+
+    private static boolean startsWithAnyPrefix(String path, Set<String> prefixes) {
+        for (String prefix : prefixes) {
+            if (path.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
-    public void nodeAdded(FileSystemNode snapshot) {
+    protected void snapshotRemoved(CompleteFileSystemLocationSnapshot snapshot) {
         // TODO
     }
 
     public static class Factory implements FileWatcherRegistryFactory {
+
         @Override
-        public FileWatcherRegistry startWatching(SnapshotHierarchy snapshotHierarchy, Predicate<String> watchFilter, Collection<File> mustWatchDirectories, ChangeHandler handler) {
-            Set<String> mustWatchDirectoryPrefixes = ImmutableSet.copyOf(
-                mustWatchDirectories.stream()
-                    .map(path -> path.getAbsolutePath() + File.separator)
-                    ::iterator
-            );
-            Set<String> directories = WatchRootUtil.resolveDirectoriesToWatch(
-                snapshotHierarchy,
-                path -> watchFilter.test(path) || startsWithAnyPrefix(path, mustWatchDirectoryPrefixes),
-                mustWatchDirectories);
-            Set<Path> watchRoots = WatchRootUtil.resolveRootsToWatch(directories);
-            LOGGER.warn("Watching {} directory hierarchies to track changes between builds in {} directories", watchRoots.size(), directories.size());
-            return new DarwinFileWatcherRegistry(watchRoots, handler);
+        public FileWatcherRegistry startWatcher(Predicate<String> watchFilter, Collection<File> mustWatchDirectories, ChangeHandler handler) {
+            return new DarwinFileWatcherRegistry(watchFilter, mustWatchDirectories, handler);
         }
 
-        private static boolean startsWithAnyPrefix(String path, Set<String> prefixes) {
-            for (String prefix : prefixes) {
-                if (path.startsWith(prefix)) {
-                    return true;
-                }
-            }
-            return false;
-        }
     }
 }

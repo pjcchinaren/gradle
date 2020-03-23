@@ -28,10 +28,10 @@ public interface WatchingAwareVirtualFileSystem extends VirtualFileSystem {
     /**
      * Called when the build is started.
      */
-    void afterStart(boolean watchingEnabled);
+    void afterStart(boolean watchingEnabled, Supplier<File> rootProjectDir);
 
     /**
      * Called when the build is completed.
      */
-    void beforeComplete(boolean watchingEnabled, Supplier<File> rootProjectDir);
+    void beforeComplete(boolean watchingEnabled);
 }

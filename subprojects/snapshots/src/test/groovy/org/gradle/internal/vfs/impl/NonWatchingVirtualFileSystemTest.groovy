@@ -26,13 +26,13 @@ class NonWatchingVirtualFileSystemTest extends Specification {
     def "invalidates the virtual file system before and after the build"() {
 
         when:
-        nonWatchingVirtualFileSystem.afterStart(retentionEnabled)
+        nonWatchingVirtualFileSystem.afterStart(retentionEnabled, { -> new File("some/location") })
         then:
         1 * delegate.invalidateAll()
         0 * _
 
         when:
-        nonWatchingVirtualFileSystem.beforeComplete(retentionEnabled, { -> new File("some/location") })
+        nonWatchingVirtualFileSystem.beforeComplete(retentionEnabled)
         then:
         1 * delegate.invalidateAll()
         0 * _

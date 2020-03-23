@@ -71,8 +71,11 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
     }
 
     @Override
-    public void afterStart(boolean watchingEnabled) {
+    public void afterStart(boolean watchingEnabled, Supplier<File> rootProjectDir) {
         if (watchingEnabled) {
+            if (watchRegistry == null) {
+                startWatching(rootProjectDir);
+            }
             handleWatcherRegistryEvents("since last build");
             printStatistics("retained", "since last build");
             producedByCurrentBuild.set(DefaultFileHierarchySet.of());
@@ -84,14 +87,12 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
     }
 
     @Override
-    public void beforeComplete(boolean watchingEnabled, Supplier<File> rootProjectDirSupplier) {
+    public void beforeComplete(boolean watchingEnabled) {
         if (watchingEnabled) {
             handleWatcherRegistryEvents("for current build");
-            stopWatching();
             buildRunning = false;
             producedByCurrentBuild.set(DefaultFileHierarchySet.of());
             printStatistics("retains", "till next build");
-            startWatching(rootProjectDirSupplier);
         } else {
             invalidateAll();
         }
@@ -109,7 +110,7 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
         try {
             long startTime = System.currentTimeMillis();
             File rootProjectDir = rootProjectDirSupplier.get();
-            watchRegistry = watcherRegistryFactory.startWatching(getRoot(), watchFilter, Collections.singletonList(rootProjectDir), new FileWatcherRegistry.ChangeHandler() {
+            watchRegistry = watcherRegistryFactory.startWatcher(watchFilter, Collections.singletonList(rootProjectDir), new FileWatcherRegistry.ChangeHandler() {
                 @Override
                 public void handleChange(FileWatcherRegistry.Type type, Path path) {
                     LOGGER.debug("Handling VFS change {} {}", type, path);

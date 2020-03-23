@@ -254,7 +254,8 @@ class VirtualFileSystemRetentionIntegrationTest extends AbstractIntegrationSpec 
         }
         then:
         executedAndNotSkipped(":consumer")
-        retainedFilesInCurrentBuild == 2
+        // TODO: sometimes, the changes from the same build are picked up
+        retainedFilesInCurrentBuild >= 1
 
         when:
         runWithRetentionAndDoChangesWhen("consumer", "userInput") {
@@ -302,9 +303,7 @@ class VirtualFileSystemRetentionIntegrationTest extends AbstractIntegrationSpec 
         then:
         executedAndNotSkipped(":consumer")
         outputFile.text == "initial"
-        // TODO: The change after the first task execution will only be detected once
-        //       we start watches during the build, since currently the first build does not watch anything.
-        retainedFilesInCurrentBuild == 2  // TODO: should be 1
+        retainedFilesInCurrentBuild == 1
 
         when:
         runWithRetentionAndDoChangesWhen("consumer", "userInput") {
@@ -312,8 +311,8 @@ class VirtualFileSystemRetentionIntegrationTest extends AbstractIntegrationSpec 
             waitForChangesToBePickedUp()
         }
         then:
-        skipped(":consumer") // TODO: should be executedAndNotSkipped
-        outputFile.text == "initial"
+        executedAndNotSkipped(":consumer")
+        outputFile.text == "changed"
         receivedFileSystemEventsInCurrentBuild >= 1
         retainedFilesInCurrentBuild == 1
 
@@ -596,7 +595,6 @@ class VirtualFileSystemRetentionIntegrationTest extends AbstractIntegrationSpec 
         withRetention().fails("help")
         then:
         failureHasCause("Boom")
-        errorOutput.contains("Couldn't create watch service, not tracking changes between builds")
     }
 
     @Issue("https://github.com/gradle/gradle/issues/11851")
