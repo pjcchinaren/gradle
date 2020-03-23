@@ -39,6 +39,7 @@ import org.gradle.internal.nativeintegration.filesystem.FileSystem;
 import org.gradle.internal.resource.local.FileResourceConnector;
 import org.gradle.internal.resource.local.FileResourceRepository;
 import org.gradle.internal.time.Time;
+import org.gradle.internal.vfs.SnapshotHierarchy;
 import org.gradle.internal.vfs.VirtualFileSystem;
 import org.gradle.internal.vfs.impl.DefaultVirtualFileSystem;
 import org.gradle.process.internal.DefaultExecActionFactory;
@@ -190,7 +191,7 @@ public class TestFiles {
     }
 
     public static VirtualFileSystem virtualFileSystem() {
-        return new DefaultVirtualFileSystem(fileHasher(), new StringInterner(), fileSystem(), fileSystem().isCaseSensitive() ? CASE_SENSITIVE : CASE_INSENSITIVE);
+        return new DefaultVirtualFileSystem(fileHasher(), new StringInterner(), fileSystem(), fileSystem().isCaseSensitive() ? CASE_SENSITIVE : CASE_INSENSITIVE, SnapshotHierarchy.ChangeListener.NOOP);
     }
 
     public static FileCollectionFactory fileCollectionFactory() {

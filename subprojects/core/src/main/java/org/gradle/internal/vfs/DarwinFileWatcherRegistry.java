@@ -19,6 +19,7 @@ package org.gradle.internal.vfs;
 import com.google.common.collect.ImmutableSet;
 import net.rubygrapefruit.platform.Native;
 import net.rubygrapefruit.platform.internal.jni.OsxFileEventFunctions;
+import org.gradle.internal.snapshot.FileSystemNode;
 import org.gradle.internal.vfs.watch.FileWatcherRegistry;
 import org.gradle.internal.vfs.watch.FileWatcherRegistryFactory;
 import org.gradle.internal.vfs.watch.WatchRootUtil;
@@ -46,6 +47,16 @@ public class DarwinFileWatcherRegistry extends AbstractEventDrivenFileWatcherReg
                 ),
             handler
         );
+    }
+
+    @Override
+    public void nodeRemoved(FileSystemNode snapshot) {
+        // TODO
+    }
+
+    @Override
+    public void nodeAdded(FileSystemNode snapshot) {
+        // TODO
     }
 
     public static class Factory implements FileWatcherRegistryFactory {

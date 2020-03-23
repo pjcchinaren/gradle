@@ -25,7 +25,8 @@ class WatchingVirtualFileSystemTest extends Specification {
     def delegate = Mock(AbstractVirtualFileSystem)
     def watcherRegistryFactory = Mock(FileWatcherRegistryFactory)
     def watcherRegistry = Mock(FileWatcherRegistry)
-    def watchingVirtualFileSystem = new WatchingVirtualFileSystem(watcherRegistryFactory, delegate, { -> true })
+    def listenerRegistration = Mock(WatchingVirtualFileSystem.ListenerRegistration)
+    def watchingVirtualFileSystem = new WatchingVirtualFileSystem(watcherRegistryFactory, delegate, listenerRegistration, { -> true })
     def snapshotHierarchy = DefaultSnapshotHierarchy.empty(CaseSensitivity.CASE_SENSITIVE)
 
     def "invalidates the virtual file system before and after the build when watching is disabled"() {
@@ -54,6 +55,7 @@ class WatchingVirtualFileSystemTest extends Specification {
         then:
         _ * delegate.getRoot() >> snapshotHierarchy
         1 * watcherRegistryFactory.startWatching(snapshotHierarchy, _, _, _) >> watcherRegistry
+        1 * listenerRegistration.addListener(watcherRegistry)
         0 * _
 
         when:
@@ -61,6 +63,7 @@ class WatchingVirtualFileSystemTest extends Specification {
         then:
         1 * delegate.invalidateAll()
         1 * watcherRegistry.close()
+        1 * listenerRegistration.removeListener(watcherRegistry)
         0 * _
     }
 
@@ -76,6 +79,7 @@ class WatchingVirtualFileSystemTest extends Specification {
         then:
         _ * delegate.getRoot() >> snapshotHierarchy
         1 * watcherRegistryFactory.startWatching(snapshotHierarchy, _, _, _) >> watcherRegistry
+        1 * listenerRegistration.addListener(watcherRegistry)
         0 * _
 
         when:

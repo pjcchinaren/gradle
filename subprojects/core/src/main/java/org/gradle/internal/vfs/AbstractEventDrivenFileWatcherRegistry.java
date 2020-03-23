@@ -34,7 +34,7 @@ import static org.gradle.internal.vfs.watch.FileWatcherRegistry.Type.INVALIDATE;
 import static org.gradle.internal.vfs.watch.FileWatcherRegistry.Type.MODIFIED;
 import static org.gradle.internal.vfs.watch.FileWatcherRegistry.Type.REMOVED;
 
-public class AbstractEventDrivenFileWatcherRegistry implements FileWatcherRegistry {
+public abstract class AbstractEventDrivenFileWatcherRegistry implements FileWatcherRegistry {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractEventDrivenFileWatcherRegistry.class);
 
     private final FileWatcher watcher;

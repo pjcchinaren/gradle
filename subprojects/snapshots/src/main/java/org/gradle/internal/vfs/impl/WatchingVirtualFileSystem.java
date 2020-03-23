@@ -21,6 +21,7 @@ import com.google.common.collect.Multiset;
 import org.gradle.internal.file.DefaultFileHierarchySet;
 import org.gradle.internal.file.FileHierarchySet;
 import org.gradle.internal.file.FileType;
+import org.gradle.internal.vfs.SnapshotHierarchy;
 import org.gradle.internal.vfs.WatchingAwareVirtualFileSystem;
 import org.gradle.internal.vfs.watch.FileWatcherRegistry;
 import org.gradle.internal.vfs.watch.FileWatcherRegistryFactory;
@@ -45,19 +46,27 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
     private static final Logger LOGGER = LoggerFactory.getLogger(WatchingVirtualFileSystem.class);
 
     private final FileWatcherRegistryFactory watcherRegistryFactory;
+    private final ListenerRegistration listenerRegistration;
     private final Predicate<String> watchFilter;
     private final AtomicReference<FileHierarchySet> producedByCurrentBuild = new AtomicReference<>(DefaultFileHierarchySet.of());
 
     private FileWatcherRegistry watchRegistry;
     private volatile boolean buildRunning;
 
+    public interface ListenerRegistration {
+        void addListener(SnapshotHierarchy.ChangeListener changeListener);
+        void removeListener(SnapshotHierarchy.ChangeListener changeListener);
+    }
+
     public WatchingVirtualFileSystem(
         FileWatcherRegistryFactory watcherRegistryFactory,
         AbstractVirtualFileSystem delegate,
+        ListenerRegistration listenerRegistration,
         Predicate<String> watchFilter
     ) {
         super(delegate);
         this.watcherRegistryFactory = watcherRegistryFactory;
+        this.listenerRegistration = listenerRegistration;
         this.watchFilter = watchFilter;
     }
 
@@ -116,6 +125,7 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
                     invalidateAll();
                 }
             });
+            listenerRegistration.addListener(watchRegistry);
             long endTime = System.currentTimeMillis() - startTime;
             LOGGER.warn("Spent {} ms registering watches for file system events", endTime);
         } catch (WatchingNotSupportedException ex) {
@@ -140,6 +150,7 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
         }
 
         try {
+            listenerRegistration.removeListener(watchRegistry);
             watchRegistry.close();
         } catch (IOException ex) {
             LOGGER.error("Couldn't fetch file changes, dropping VFS state", ex);

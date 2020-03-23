@@ -19,6 +19,7 @@ package org.gradle.internal.vfs;
 import net.rubygrapefruit.platform.Native;
 import net.rubygrapefruit.platform.NativeException;
 import net.rubygrapefruit.platform.internal.jni.LinuxFileEventFunctions;
+import org.gradle.internal.snapshot.FileSystemNode;
 import org.gradle.internal.vfs.watch.FileWatcherRegistry;
 import org.gradle.internal.vfs.watch.FileWatcherRegistryFactory;
 import org.gradle.internal.vfs.watch.WatchRootUtil;
@@ -43,6 +44,16 @@ public class LinuxFileWatcherRegistry extends AbstractEventDrivenFileWatcherRegi
             callback -> Native.get(LinuxFileEventFunctions.class).startWatcher(callback),
             handler
         );
+    }
+
+    @Override
+    public void nodeRemoved(FileSystemNode snapshot) {
+        // TODO
+    }
+
+    @Override
+    public void nodeAdded(FileSystemNode snapshot) {
+        // TODO
     }
 
     public static class Factory implements FileWatcherRegistryFactory {
