@@ -18,18 +18,29 @@ package org.gradle.internal.vfs;
 
 import net.rubygrapefruit.platform.Native;
 import net.rubygrapefruit.platform.internal.jni.LinuxFileEventFunctions;
+import org.gradle.internal.snapshot.CompleteDirectorySnapshot;
 import org.gradle.internal.snapshot.CompleteFileSystemLocationSnapshot;
+import org.gradle.internal.snapshot.FileSystemSnapshotVisitor;
 import org.gradle.internal.vfs.watch.FileWatcherRegistry;
 import org.gradle.internal.vfs.watch.FileWatcherRegistryFactory;
+import org.gradle.internal.vfs.watch.WatchRootUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
 
 public class LinuxFileWatcherRegistry extends AbstractEventDrivenFileWatcherRegistry {
     private static final Logger LOGGER = LoggerFactory.getLogger(LinuxFileWatcherRegistry.class);
+    private final Map<String, CompleteFileSystemLocationSnapshot> watchedSnapshots = new HashMap<>();
+    private final Set<String> watchedRoots = new HashSet<>();
+    private final Set<String> mustWatchDirectories = new HashSet<>();
 
     public LinuxFileWatcherRegistry(Predicate<String> watchFilter, ChangeHandler handler) {
         super(
@@ -41,17 +52,75 @@ public class LinuxFileWatcherRegistry extends AbstractEventDrivenFileWatcherRegi
 
     @Override
     protected void snapshotAdded(CompleteFileSystemLocationSnapshot snapshot) {
-        // TODO
+        watchedSnapshots.put(snapshot.getAbsolutePath(), snapshot);
+        updateWatchedDirectories();
     }
 
     @Override
     protected void snapshotRemoved(CompleteFileSystemLocationSnapshot snapshot) {
-        // TODO
+        watchedSnapshots.remove(snapshot.getAbsolutePath());
+        updateWatchedDirectories();
     }
 
     @Override
     public void updateMustWatchDirectories(Collection<File> updatedWatchDirectories) {
-        // TODO
+        mustWatchDirectories.clear();
+        updatedWatchDirectories.stream().map(File::getAbsolutePath).forEach(mustWatchDirectories::add);
+        updateWatchedDirectories();
+
+    }
+
+    private void updateWatchedDirectories() {
+        Set<String> directoriesToWatch = new HashSet<>();
+        watchedSnapshots.values().stream()
+            .filter(snapshot -> getWatchFilter().test(snapshot.getAbsolutePath()))
+            .forEach(snapshot -> {
+                WatchRootUtil.getDirectoriesToWatch(snapshot).map(Path::toString).forEach(directoriesToWatch::add);
+                snapshot.accept(new FileSystemSnapshotVisitor() {
+                    boolean root = true;
+
+                    @Override
+                    public boolean preVisitDirectory(CompleteDirectorySnapshot directorySnapshot) {
+                        if (!root) {
+                            directoriesToWatch.add(directorySnapshot.getAbsolutePath());
+                        }
+                        root = false;
+                        return true;
+                    }
+
+                    @Override
+                    public void visitFile(CompleteFileSystemLocationSnapshot fileSnapshot) {
+                    }
+
+                    @Override
+                    public void postVisitDirectory(CompleteDirectorySnapshot directorySnapshot) {
+                    }
+                });
+            });
+        directoriesToWatch.addAll(mustWatchDirectories);
+
+        updateWatchedDirectories(directoriesToWatch);
+    }
+
+    private void updateWatchedDirectories(Set<String> newWatchRoots) {
+        Set<String> watchRootsToRemove = new HashSet<>(watchedRoots);
+        if (newWatchRoots.isEmpty()) {
+            LOGGER.warn("Not watching anything anymore");
+        }
+        watchRootsToRemove.removeAll(newWatchRoots);
+        newWatchRoots.removeAll(watchedRoots);
+        if (newWatchRoots.isEmpty() && watchRootsToRemove.isEmpty()) {
+            return;
+        }
+        LOGGER.warn("Watching {} directory hierarchies to track changes", newWatchRoots.size());
+        newWatchRoots.stream()
+            .map(File::new)
+            .forEach(getWatcher()::startWatching);
+        watchRootsToRemove.stream()
+            .map(File::new)
+            .forEach(getWatcher()::stopWatching);
+        watchedRoots.addAll(newWatchRoots);
+        watchedRoots.removeAll(watchRootsToRemove);
     }
 
     public static class Factory implements FileWatcherRegistryFactory {
