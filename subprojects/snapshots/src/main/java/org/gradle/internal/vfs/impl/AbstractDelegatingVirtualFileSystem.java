@@ -22,6 +22,7 @@ import org.gradle.internal.snapshot.SnapshottingFilter;
 import org.gradle.internal.vfs.SnapshotHierarchy;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -63,7 +64,7 @@ abstract class AbstractDelegatingVirtualFileSystem extends AbstractVirtualFileSy
     }
 
     @Override
-    SnapshotHierarchy getRoot() {
+    AtomicReference<SnapshotHierarchy> getRoot() {
         return delegate.getRoot();
     }
 }

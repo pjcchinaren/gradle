@@ -161,8 +161,8 @@ public class DefaultVirtualFileSystem extends AbstractVirtualFileSystem {
     }
 
     @Override
-    SnapshotHierarchy getRoot() {
-        return root.get();
+    AtomicReference<SnapshotHierarchy> getRoot() {
+        return root;
     }
 
     private CompleteFileSystemLocationSnapshot readLocation(String location) {

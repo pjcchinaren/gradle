@@ -34,7 +34,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
@@ -120,7 +119,7 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
                     LOGGER.debug("Handling VFS change {} {}", type, path);
                     String absolutePath = path.toString();
                     if (!(buildRunning && producedByCurrentBuild.get().contains(absolutePath))) {
-                        WatchingVirtualFileSystem.super.update(Collections.singleton(absolutePath), () -> {});
+                        getRoot().updateAndGet(root -> root.invalidate(absolutePath, watchRegistry));
                     }
                 }
 
@@ -207,7 +206,7 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
 
     private VirtualFileSystemStatistics getStatistics() {
         EnumMultiset<FileType> retained = EnumMultiset.create(FileType.class);
-        getRoot().visitSnapshots((snapshot, rootOfCompleteHierarchy) -> retained.add(snapshot.getType()));
+        getRoot().get().visitSnapshots((snapshot, rootOfCompleteHierarchy) -> retained.add(snapshot.getType()));
         return new VirtualFileSystemStatistics(retained);
     }
 
