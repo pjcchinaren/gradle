@@ -31,11 +31,10 @@ import java.util.function.Predicate;
 public class LinuxFileWatcherRegistry extends AbstractEventDrivenFileWatcherRegistry {
     private static final Logger LOGGER = LoggerFactory.getLogger(LinuxFileWatcherRegistry.class);
 
-    public LinuxFileWatcherRegistry(Predicate<String> watchFilter, Collection<File> mustWatchDirectories, ChangeHandler handler) {
+    public LinuxFileWatcherRegistry(Predicate<String> watchFilter, ChangeHandler handler) {
         super(
             callback -> Native.get(LinuxFileEventFunctions.class).startWatcher(callback),
             watchFilter,
-            mustWatchDirectories,
             handler
         );
     }
@@ -50,11 +49,16 @@ public class LinuxFileWatcherRegistry extends AbstractEventDrivenFileWatcherRegi
         // TODO
     }
 
+    @Override
+    public void updateMustWatchDirectories(Collection<File> updatedWatchDirectories) {
+        // TODO
+    }
+
     public static class Factory implements FileWatcherRegistryFactory {
 
         @Override
-        public FileWatcherRegistry startWatcher(Predicate<String> watchFilter, Collection<File> mustWatchDirectories, ChangeHandler handler) {
-            return new LinuxFileWatcherRegistry(watchFilter, mustWatchDirectories, handler);
+        public FileWatcherRegistry startWatcher(Predicate<String> watchFilter, ChangeHandler handler) {
+            return new LinuxFileWatcherRegistry(watchFilter, handler);
         }
     }
 }

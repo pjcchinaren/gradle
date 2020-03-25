@@ -16,8 +16,6 @@
 
 package org.gradle.internal.vfs.watch;
 
-import java.io.File;
-import java.util.Collection;
 import java.util.function.Predicate;
 
 public interface FileWatcherRegistryFactory {
@@ -26,5 +24,5 @@ public interface FileWatcherRegistryFactory {
      *
      * @throws WatchingNotSupportedException when the native watcher is unable to start.
      */
-    FileWatcherRegistry startWatcher(Predicate<String> watchFilter, Collection<File> mustWatchDirectories, FileWatcherRegistry.ChangeHandler handler);
+    FileWatcherRegistry startWatcher(Predicate<String> watchFilter, FileWatcherRegistry.ChangeHandler handler);
 }

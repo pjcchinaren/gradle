@@ -186,10 +186,15 @@ public class DefaultVirtualFileSystem extends AbstractVirtualFileSystem {
 
     @Override
     public void invalidateAll() {
-        updateRoot((root) ->
-            // TODO: Close watching here.
-            root.empty()
-        );
+        updateRoot((root) -> {
+            // TODO: Close/restart watching here.
+            root.visitSnapshots((snapshot, rootOfCompleteHierarchy) -> {
+                if (rootOfCompleteHierarchy) {
+                    changeListener.nodeRemoved(snapshot);
+                }
+            });
+            return root.empty();
+        });
     }
 
     @Override

@@ -88,7 +88,7 @@ class VirtualFileSystemServicesTest extends Specification {
         when:
         buildLifecycleListener.afterStart(gradle)
         then:
-        1 * virtualFileSystem.afterStart(retentionEnabled, rootProjectDir)
+        1 * virtualFileSystem.afterStart(retentionEnabled)
 
         when:
         buildLifecycleListener.beforeComplete(gradle)

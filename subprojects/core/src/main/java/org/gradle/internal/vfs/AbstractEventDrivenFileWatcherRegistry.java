@@ -16,7 +16,6 @@
 
 package org.gradle.internal.vfs;
 
-import com.google.common.collect.ImmutableSet;
 import net.rubygrapefruit.platform.file.FileWatcher;
 import net.rubygrapefruit.platform.file.FileWatcherCallback;
 import org.gradle.internal.snapshot.CompleteFileSystemLocationSnapshot;
@@ -25,15 +24,11 @@ import org.gradle.internal.vfs.watch.FileWatcherRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import static org.gradle.internal.vfs.watch.FileWatcherRegistry.Type.CREATED;
 import static org.gradle.internal.vfs.watch.FileWatcherRegistry.Type.INVALIDATE;
@@ -46,25 +41,14 @@ public abstract class AbstractEventDrivenFileWatcherRegistry implements FileWatc
     private final FileWatcher watcher;
     private final AtomicReference<MutableFileWatchingStatistics> fileWatchingStatistics = new AtomicReference<>(new MutableFileWatchingStatistics());
     private final Predicate<String> watchFilter;
-    private final Collection<Path> mustWatchDirectories;
 
-    public AbstractEventDrivenFileWatcherRegistry(FileWatcherCreator watcherCreator, Predicate<String> watchFilter, Collection<File> mustWatchDirectories, ChangeHandler handler) {
+    public AbstractEventDrivenFileWatcherRegistry(FileWatcherCreator watcherCreator, Predicate<String> watchFilter, ChangeHandler handler) {
         this.watcher = createWatcher(watcherCreator, handler);
         this.watchFilter = watchFilter;
-        this.mustWatchDirectories = ImmutableSet.copyOf(
-            mustWatchDirectories.stream()
-                .map(File::toPath)
-                .map(Path::toAbsolutePath)
-                .collect(Collectors.toList())
-        );
     }
 
     protected Predicate<String> getWatchFilter() {
         return watchFilter;
-    }
-
-    protected Collection<Path> getMustWatchDirectories() {
-        return mustWatchDirectories;
     }
 
     public FileWatcher getWatcher() {

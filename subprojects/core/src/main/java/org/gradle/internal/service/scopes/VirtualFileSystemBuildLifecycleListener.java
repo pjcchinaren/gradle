@@ -86,7 +86,8 @@ class VirtualFileSystemBuildLifecycleListener implements RootBuildLifecycleListe
                 );
             }
         }
-        gradle.rootProject(rootProject -> virtualFileSystem.afterStart(vfsRetentionEnabled, rootProject::getProjectDir));
+        virtualFileSystem.afterStart(vfsRetentionEnabled);
+        gradle.settingsEvaluated(settings -> virtualFileSystem.updateMustWatchDirectories(ImmutableList.of(settings.getRootDir())));
     }
 
     private static List<File> getChangedPathsSinceLastBuild(PathToFileResolver resolver, @Nullable String changeList) {

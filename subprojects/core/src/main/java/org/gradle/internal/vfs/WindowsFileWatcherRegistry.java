@@ -39,11 +39,10 @@ public class WindowsFileWatcherRegistry extends AbstractEventDrivenFileWatcherRe
 
     private final Set<Path> watchedRoots = new HashSet<>();
 
-    public WindowsFileWatcherRegistry(Predicate<String> watchFilter, Collection<File> mustWatchDirectories, ChangeHandler handler) {
+    public WindowsFileWatcherRegistry(Predicate<String> watchFilter, ChangeHandler handler) {
         super(
             callback -> Native.get(WindowsFileEventFunctions.class).startWatcher(callback),
             watchFilter,
-            mustWatchDirectories,
             handler
         );
     }
@@ -52,7 +51,6 @@ public class WindowsFileWatcherRegistry extends AbstractEventDrivenFileWatcherRe
     protected void snapshotAdded(CompleteFileSystemLocationSnapshot snapshot) {
         List<Path> alreadyWatchedDirectories = ImmutableList
             .<Path>builder()
-            .addAll(getMustWatchDirectories())
             .addAll(watchedRoots)
             .build();
         Set<String> directories = WatchRootUtil.resolveDirectoriesToWatch(snapshot, getWatchFilter(), alreadyWatchedDirectories);
@@ -73,11 +71,16 @@ public class WindowsFileWatcherRegistry extends AbstractEventDrivenFileWatcherRe
     protected void snapshotRemoved(CompleteFileSystemLocationSnapshot snapshot) {
     }
 
+    @Override
+    public void updateMustWatchDirectories(Collection<File> updatedWatchDirectories) {
+        // TODO
+    }
+
     public static class Factory implements FileWatcherRegistryFactory {
 
         @Override
-        public FileWatcherRegistry startWatcher(Predicate<String> watchFilter, Collection<File> mustWatchDirectories, ChangeHandler handler) {
-            return new WindowsFileWatcherRegistry(watchFilter, mustWatchDirectories, handler);
+        public FileWatcherRegistry startWatcher(Predicate<String> watchFilter, ChangeHandler handler) {
+            return new WindowsFileWatcherRegistry(watchFilter, handler);
         }
     }
 }

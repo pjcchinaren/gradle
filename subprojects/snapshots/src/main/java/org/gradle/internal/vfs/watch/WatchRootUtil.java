@@ -16,6 +16,7 @@
 
 package org.gradle.internal.vfs.watch;
 
+import org.gradle.internal.file.FileType;
 import org.gradle.internal.snapshot.CompleteDirectorySnapshot;
 import org.gradle.internal.snapshot.CompleteFileSystemLocationSnapshot;
 import org.gradle.internal.snapshot.FileSystemSnapshotVisitor;
@@ -29,6 +30,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class WatchRootUtil {
     /**
@@ -38,6 +40,30 @@ public class WatchRootUtil {
         Set<Path> roots = new HashSet<>();
         directories.stream()
             .map(Paths::get)
+            .sorted(Comparator.comparingInt(Path::getNameCount))
+            .filter(path -> {
+                Path parent = path;
+                while (true) {
+                    parent = parent.getParent();
+                    if (parent == null) {
+                        break;
+                    }
+                    if (roots.contains(parent)) {
+                        return false;
+                    }
+                }
+                return true;
+            })
+            .forEach(roots::add);
+        return roots;
+    }
+
+    /**
+     * Filters out directories whose ancestor is also among the watched directories.
+     */
+    public static Set<Path> resolveRootsToWatchFromPaths(Set<Path> directories) {
+        Set<Path> roots = new HashSet<>();
+        directories.stream()
             .sorted(Comparator.comparingInt(Path::getNameCount))
             .filter(path -> {
                 Path parent = path;
@@ -116,6 +142,31 @@ public class WatchRootUtil {
             }
         });
         return watchedDirectories;
+    }
+
+    public static Stream<Path> getDirectoriesToWatch(CompleteFileSystemLocationSnapshot snapshot) {
+        Path path = Paths.get(snapshot.getAbsolutePath());
+
+        // For existing files and directories we watch the parent directory,
+        // so we learn if the entry itself disappears or gets modified.
+        // In case of a missing file we need to find the closest existing
+        // ancestor to watch so we can learn if the missing file respawns.
+        Path ancestorToWatch;
+        switch (snapshot.getType()) {
+            case RegularFile:
+            case Directory:
+                ancestorToWatch = path.getParent();
+                break;
+            case Missing:
+                ancestorToWatch = findFirstExistingAncestor(path);
+                break;
+            default:
+                throw new AssertionError();
+        }
+        return snapshot.getType() == FileType.Directory
+            ? Stream.of(ancestorToWatch, path)
+            : Stream.of(ancestorToWatch);
+
     }
 
     private static Path findFirstExistingAncestor(Path path) {

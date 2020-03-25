@@ -31,7 +31,7 @@ class WatchingVirtualFileSystemTest extends Specification {
 
     def "invalidates the virtual file system before and after the build when watching is disabled"() {
         when:
-        watchingVirtualFileSystem.afterStart(false, { -> new File("some/location") })
+        watchingVirtualFileSystem.afterStart(false)
         then:
         1 * delegate.invalidateAll()
         0 * _
@@ -45,7 +45,7 @@ class WatchingVirtualFileSystemTest extends Specification {
 
     def "stops the watchers before the build when watching is disabled"() {
         when:
-        watchingVirtualFileSystem.afterStart(true, { -> new File("some/location") })
+        watchingVirtualFileSystem.afterStart(true)
         then:
         _ * delegate.getRoot() >> snapshotHierarchy
         1 * watcherRegistryFactory.startWatcher(_, _, _) >> watcherRegistry
@@ -61,7 +61,7 @@ class WatchingVirtualFileSystemTest extends Specification {
         0 * _
 
         when:
-        watchingVirtualFileSystem.afterStart(false, { -> new File("some/location") })
+        watchingVirtualFileSystem.afterStart(false)
         then:
         1 * delegate.invalidateAll()
         1 * watcherRegistry.close()
@@ -71,7 +71,7 @@ class WatchingVirtualFileSystemTest extends Specification {
 
     def "retains the virtual file system when watching is enabled"() {
         when:
-        watchingVirtualFileSystem.afterStart(true, { -> new File("some/location") })
+        watchingVirtualFileSystem.afterStart(true)
         then:
         _ * delegate.getRoot() >> snapshotHierarchy
         1 * watcherRegistryFactory.startWatcher(_, _, _) >> watcherRegistry
@@ -87,7 +87,7 @@ class WatchingVirtualFileSystemTest extends Specification {
         0 * _
 
         when:
-        watchingVirtualFileSystem.afterStart(true, { -> new File("some/location") })
+        watchingVirtualFileSystem.afterStart(true)
         then:
         _ * delegate.getRoot() >> snapshotHierarchy
         1 * watcherRegistry.getAndResetStatistics() >> Stub(FileWatcherRegistry.FileWatchingStatistics)

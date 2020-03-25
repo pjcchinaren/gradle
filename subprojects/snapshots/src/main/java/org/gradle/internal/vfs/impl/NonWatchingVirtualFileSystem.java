@@ -21,7 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.function.Supplier;
+import java.util.Collection;
 
 /**
  * A {@link org.gradle.internal.vfs.VirtualFileSystem} which is not able to register any watches.
@@ -35,11 +35,15 @@ public class NonWatchingVirtualFileSystem extends AbstractDelegatingVirtualFileS
     }
 
     @Override
-    public void afterStart(boolean watchingEnabled, Supplier<File> rootProjectDir) {
+    public void afterStart(boolean watchingEnabled) {
         if (watchingEnabled) {
             LOGGER.warn("Watching for file changes is not supported on the current operating system");
         }
         invalidateAll();
+    }
+
+    @Override
+    public void updateMustWatchDirectories(Collection<File> mustWatchDirectories) {
     }
 
     @Override
