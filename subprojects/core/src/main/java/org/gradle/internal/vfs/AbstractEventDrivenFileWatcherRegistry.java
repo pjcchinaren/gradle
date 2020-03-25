@@ -26,6 +26,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
@@ -56,31 +59,24 @@ public abstract class AbstractEventDrivenFileWatcherRegistry implements FileWatc
     }
 
     @Override
-    public void nodeRemoved(FileSystemNode removedNode) {
-        removedNode.accept(
-            (node, parent) -> node.getSnapshot().ifPresent(snapshot -> {
-                if (snapshot instanceof CompleteFileSystemLocationSnapshot) {
-                    if (!(parent instanceof CompleteFileSystemLocationSnapshot)) {
-                        snapshotRemoved((CompleteFileSystemLocationSnapshot) snapshot);
-                    }
-                }
-            }),
-            null
-        );
+    public void changed(Collection<FileSystemNode> removedNodes, Collection<FileSystemNode> addedNodes) {
+        getAllSnapshots(removedNodes).forEach(this::snapshotRemoved);
+        getAllSnapshots(addedNodes).forEach(this::snapshotAdded);
     }
 
-    @Override
-    public void nodeAdded(FileSystemNode addedNode) {
-        addedNode.accept(
+    private List<CompleteFileSystemLocationSnapshot> getAllSnapshots(Collection<FileSystemNode> nodes) {
+        List<CompleteFileSystemLocationSnapshot> snapshots = new ArrayList<>();
+        nodes.forEach(node0 -> node0.accept(
             (node, parent) -> node.getSnapshot().ifPresent(snapshot -> {
                 if (snapshot instanceof CompleteFileSystemLocationSnapshot) {
                     if (!(parent instanceof CompleteFileSystemLocationSnapshot)) {
-                        snapshotAdded((CompleteFileSystemLocationSnapshot) snapshot);
+                        snapshots.add((CompleteFileSystemLocationSnapshot) snapshot);
                     }
                 }
             }),
             null
-        );
+        ));
+        return snapshots;
     }
 
     protected abstract void snapshotAdded(CompleteFileSystemLocationSnapshot snapshot);

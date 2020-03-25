@@ -48,11 +48,11 @@ class DefaultSnapshotHierarchyTest extends Specification {
 
     def changeListener = new SnapshotHierarchy.ChangeListener() {
         @Override
-        void nodeRemoved(FileSystemNode snapshot) {
+        void nodeRemoved(FileSystemNode node) {
         }
 
         @Override
-        void nodeAdded(FileSystemNode snapshot) {
+        void nodeAdded(FileSystemNode node) {
         }
     }
 

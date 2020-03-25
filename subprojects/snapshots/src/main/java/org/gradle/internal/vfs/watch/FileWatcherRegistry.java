@@ -16,7 +16,7 @@
 
 package org.gradle.internal.vfs.watch;
 
-import org.gradle.internal.vfs.SnapshotHierarchy;
+import org.gradle.internal.vfs.VirtualFileSystem;
 
 import java.io.Closeable;
 import java.io.File;
@@ -25,7 +25,7 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Optional;
 
-public interface FileWatcherRegistry extends Closeable, SnapshotHierarchy.ChangeListener {
+public interface FileWatcherRegistry extends Closeable, VirtualFileSystem.VirtualFileSystemChangeListener {
 
     interface ChangeHandler {
         void handleChange(Type type, Path path);

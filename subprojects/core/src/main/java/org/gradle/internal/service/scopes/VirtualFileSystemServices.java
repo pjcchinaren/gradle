@@ -72,7 +72,6 @@ import org.gradle.internal.vfs.AdditiveCacheLocations;
 import org.gradle.internal.vfs.DarwinFileWatcherRegistry;
 import org.gradle.internal.vfs.LinuxFileWatcherRegistry;
 import org.gradle.internal.vfs.RoutingVirtualFileSystem;
-import org.gradle.internal.vfs.SnapshotHierarchy;
 import org.gradle.internal.vfs.VirtualFileSystem;
 import org.gradle.internal.vfs.WatchingAwareVirtualFileSystem;
 import org.gradle.internal.vfs.WindowsFileWatcherRegistry;
@@ -170,7 +169,7 @@ public class VirtualFileSystemServices extends AbstractPluginServiceRegistry {
             StringInterner stringInterner,
             ListenerManager listenerManager
         ) {
-            SnapshotHierarchy.ChangeListener broadcaster = listenerManager.getBroadcaster(SnapshotHierarchy.ChangeListener.class);
+            VirtualFileSystem.VirtualFileSystemChangeListener broadcaster = listenerManager.getBroadcaster(VirtualFileSystem.VirtualFileSystemChangeListener.class);
             DefaultVirtualFileSystem delegate = new DefaultVirtualFileSystem(
                 hasher,
                 stringInterner,
@@ -185,12 +184,12 @@ public class VirtualFileSystemServices extends AbstractPluginServiceRegistry {
                     delegate,
                     new WatchingVirtualFileSystem.ListenerRegistration() {
                         @Override
-                        public void addListener(SnapshotHierarchy.ChangeListener changeListener) {
+                        public void addListener(VirtualFileSystem.VirtualFileSystemChangeListener changeListener) {
                             listenerManager.addListener(changeListener);
                         }
 
                         @Override
-                        public void removeListener(SnapshotHierarchy.ChangeListener changeListener) {
+                        public void removeListener(VirtualFileSystem.VirtualFileSystemChangeListener changeListener) {
                             listenerManager.removeListener(changeListener);
                         }
                     },
@@ -277,7 +276,7 @@ public class VirtualFileSystemServices extends AbstractPluginServiceRegistry {
                 stringInterner,
                 stat,
                 fileSystem.isCaseSensitive() ? CASE_SENSITIVE : CASE_INSENSITIVE,
-                SnapshotHierarchy.ChangeListener.NOOP,
+                VirtualFileSystem.VirtualFileSystemChangeListener.NOOP,
                 DirectoryScanner.getDefaultExcludes()
             );
             RoutingVirtualFileSystem routingVirtualFileSystem = new RoutingVirtualFileSystem(

@@ -34,13 +34,13 @@ abstract class AbstractSnapshotWithChildrenTest<NODE extends FileSystemNode, CHI
 
     SnapshotHierarchy.ChangeListener changeListener = new SnapshotHierarchy.ChangeListener() {
         @Override
-        void nodeRemoved(FileSystemNode snapshot) {
-            removedSnapshots.add(snapshot)
+        void nodeRemoved(FileSystemNode node) {
+            removedSnapshots.add(node)
         }
 
         @Override
-        void nodeAdded(FileSystemNode snapshot) {
-            addedSnapshots.add(snapshot)
+        void nodeAdded(FileSystemNode node) {
+            addedSnapshots.add(node)
         }
     }
 

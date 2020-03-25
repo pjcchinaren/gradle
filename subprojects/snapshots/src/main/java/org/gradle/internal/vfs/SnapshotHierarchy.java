@@ -71,15 +71,15 @@ public interface SnapshotHierarchy {
     interface ChangeListener {
         ChangeListener NOOP = new ChangeListener() {
             @Override
-            public void nodeRemoved(FileSystemNode snapshot) {
+            public void nodeRemoved(FileSystemNode node) {
             }
 
             @Override
-            public void nodeAdded(FileSystemNode snapshot) {
+            public void nodeAdded(FileSystemNode node) {
             }
         };
 
-        void nodeRemoved(FileSystemNode snapshot);
-        void nodeAdded(FileSystemNode snapshot);
+        void nodeRemoved(FileSystemNode node);
+        void nodeAdded(FileSystemNode node);
     }
 }

@@ -21,6 +21,7 @@ import com.google.common.collect.Multiset;
 import org.gradle.internal.file.DefaultFileHierarchySet;
 import org.gradle.internal.file.FileHierarchySet;
 import org.gradle.internal.file.FileType;
+import org.gradle.internal.snapshot.FileSystemNode;
 import org.gradle.internal.vfs.SnapshotHierarchy;
 import org.gradle.internal.vfs.WatchingAwareVirtualFileSystem;
 import org.gradle.internal.vfs.watch.FileWatcherRegistry;
@@ -33,7 +34,11 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
@@ -48,13 +53,22 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
     private final ListenerRegistration listenerRegistration;
     private final Predicate<String> watchFilter;
     private final AtomicReference<FileHierarchySet> producedByCurrentBuild = new AtomicReference<>(DefaultFileHierarchySet.of());
+    private final ExecutorService executorService = Executors.newFixedThreadPool(1);
+    private final VirtualFileSystemChangeListener changeListener = new VirtualFileSystemChangeListener() {
+        @Override
+        public void changed(Collection<FileSystemNode> removedNodes, Collection<FileSystemNode> addedNodes) {
+            if (watchRegistry != null) {
+                executorService.submit(() -> watchRegistry.changed(removedNodes, addedNodes));
+            }
+        }
+    };
 
     private FileWatcherRegistry watchRegistry;
     private volatile boolean buildRunning;
 
     public interface ListenerRegistration {
-        void addListener(SnapshotHierarchy.ChangeListener changeListener);
-        void removeListener(SnapshotHierarchy.ChangeListener changeListener);
+        void addListener(VirtualFileSystemChangeListener changeListener);
+        void removeListener(VirtualFileSystemChangeListener changeListener);
     }
 
     public WatchingVirtualFileSystem(
@@ -119,7 +133,21 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
                     LOGGER.debug("Handling VFS change {} {}", type, path);
                     String absolutePath = path.toString();
                     if (!(buildRunning && producedByCurrentBuild.get().contains(absolutePath))) {
-                        getRoot().updateAndGet(root -> root.invalidate(absolutePath, watchRegistry));
+                        List<FileSystemNode> removedNodes = new ArrayList<>();
+                        List<FileSystemNode> addedNodes = new ArrayList<>();
+                        SnapshotHierarchy.ChangeListener changeListener = new SnapshotHierarchy.ChangeListener() {
+                            @Override
+                            public void nodeRemoved(FileSystemNode node) {
+                                removedNodes.add(node);
+                            }
+
+                            @Override
+                            public void nodeAdded(FileSystemNode node) {
+                                addedNodes.add(node);
+                            }
+                        };
+                        getRoot().updateAndGet(root -> root.invalidate(absolutePath, changeListener));
+                        executorService.submit(() -> watchRegistry.changed(removedNodes, addedNodes));
                     }
                 }
 
@@ -129,7 +157,7 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
                     invalidateAll();
                 }
             });
-            listenerRegistration.addListener(watchRegistry);
+            listenerRegistration.addListener(changeListener);
             long endTime = System.currentTimeMillis() - startTime;
             LOGGER.warn("Spent {} ms registering watches for file system events", endTime);
         } catch (WatchingNotSupportedException ex) {
@@ -154,7 +182,7 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
         }
 
         try {
-            listenerRegistration.removeListener(watchRegistry);
+            listenerRegistration.removeListener(changeListener);
             watchRegistry.close();
         } catch (IOException ex) {
             LOGGER.error("Couldn't fetch file changes, dropping VFS state", ex);
@@ -225,6 +253,7 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
     @Override
     public void close() {
         producedByCurrentBuild.set(DefaultFileHierarchySet.of());
+        executorService.shutdownNow();
         if (watchRegistry != null) {
             try {
                 watchRegistry.close();
