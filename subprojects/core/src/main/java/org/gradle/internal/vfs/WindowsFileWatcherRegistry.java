@@ -16,28 +16,14 @@
 
 package org.gradle.internal.vfs;
 
-import com.google.common.collect.ImmutableList;
 import net.rubygrapefruit.platform.Native;
 import net.rubygrapefruit.platform.internal.jni.WindowsFileEventFunctions;
-import org.gradle.internal.snapshot.CompleteFileSystemLocationSnapshot;
 import org.gradle.internal.vfs.watch.FileWatcherRegistry;
 import org.gradle.internal.vfs.watch.FileWatcherRegistryFactory;
-import org.gradle.internal.vfs.watch.WatchRootUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.nio.file.Path;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import java.util.function.Predicate;
 
-public class WindowsFileWatcherRegistry extends AbstractEventDrivenFileWatcherRegistry {
-    private static final Logger LOGGER = LoggerFactory.getLogger(WindowsFileWatcherRegistry.class);
-
-    private final Set<Path> watchedRoots = new HashSet<>();
+public class WindowsFileWatcherRegistry extends AbstractHierarchicalFileWatcherRegistry {
 
     public WindowsFileWatcherRegistry(Predicate<String> watchFilter, ChangeHandler handler) {
         super(
@@ -45,35 +31,6 @@ public class WindowsFileWatcherRegistry extends AbstractEventDrivenFileWatcherRe
             watchFilter,
             handler
         );
-    }
-
-    @Override
-    protected void snapshotAdded(CompleteFileSystemLocationSnapshot snapshot) {
-        List<Path> alreadyWatchedDirectories = ImmutableList
-            .<Path>builder()
-            .addAll(watchedRoots)
-            .build();
-        Set<String> directories = WatchRootUtil.resolveDirectoriesToWatch(snapshot, getWatchFilter(), alreadyWatchedDirectories);
-        Set<Path> newWatchRoots = WatchRootUtil.resolveRootsToWatch(directories);
-        LOGGER.info("Watching {} directory hierarchies to track changes between builds in {} directories", newWatchRoots.size(), directories.size());
-        Set<Path> watchRootsToRemove = new HashSet<>(watchedRoots);
-        watchRootsToRemove.removeAll(newWatchRoots);
-        newWatchRoots.removeAll(watchedRoots);
-        newWatchRoots.stream()
-            .map(Path::toFile)
-            .forEach(getWatcher()::startWatching);
-        watchRootsToRemove.stream()
-            .map(Path::toFile)
-            .forEach(getWatcher()::stopWatching);
-    }
-
-    @Override
-    protected void snapshotRemoved(CompleteFileSystemLocationSnapshot snapshot) {
-    }
-
-    @Override
-    public void updateMustWatchDirectories(Collection<File> updatedWatchDirectories) {
-        // TODO
     }
 
     public static class Factory implements FileWatcherRegistryFactory {
