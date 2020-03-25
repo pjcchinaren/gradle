@@ -113,6 +113,9 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
             buildRunning = false;
             producedByCurrentBuild.set(DefaultFileHierarchySet.of());
             printStatistics("retains", "till next build");
+            if (watchRegistry == null) {
+                invalidateAll();
+            }
         } else {
             invalidateAll();
         }
@@ -155,6 +158,7 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
                 public void handleLostState() {
                     LOGGER.warn("Dropped VFS state due to lost state");
                     invalidateAll();
+                    executorService.submit(() -> stopWatching());
                 }
             });
             listenerRegistration.addListener(changeListener);
