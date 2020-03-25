@@ -92,12 +92,14 @@ public abstract class AbstractHierarchicalFileWatcherRegistry extends AbstractEv
             return;
         }
         LOGGER.warn("Watching {} directory hierarchies to track changes", newWatchRoots.size());
-        newWatchRoots.stream()
+        getWatcher().startWatching(newWatchRoots.stream()
             .map(Path::toFile)
-            .forEach(getWatcher()::startWatching);
-        watchRootsToRemove.stream()
+            .collect(Collectors.toList())
+        );
+        getWatcher().stopWatching(watchRootsToRemove.stream()
             .map(Path::toFile)
-            .forEach(getWatcher()::stopWatching);
+            .collect(Collectors.toList())
+        );
         watchedRoots.addAll(newWatchRoots);
         watchedRoots.removeAll(watchRootsToRemove);
     }

@@ -35,6 +35,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class LinuxFileWatcherRegistry extends AbstractEventDrivenFileWatcherRegistry {
     private static final Logger LOGGER = LoggerFactory.getLogger(LinuxFileWatcherRegistry.class);
@@ -113,12 +114,12 @@ public class LinuxFileWatcherRegistry extends AbstractEventDrivenFileWatcherRegi
             return;
         }
         LOGGER.warn("Watching {} directory hierarchies to track changes", newWatchRoots.size());
-        newWatchRoots.stream()
+        getWatcher().startWatching(newWatchRoots.stream()
             .map(File::new)
-            .forEach(getWatcher()::startWatching);
-        watchRootsToRemove.stream()
+            .collect(Collectors.toList()));
+        getWatcher().stopWatching(watchRootsToRemove.stream()
             .map(File::new)
-            .forEach(getWatcher()::stopWatching);
+            .collect(Collectors.toList()));
         watchedRoots.addAll(newWatchRoots);
         watchedRoots.removeAll(watchRootsToRemove);
     }
