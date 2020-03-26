@@ -102,7 +102,9 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
 
     @Override
     public void updateMustWatchDirectories(Collection<File> mustWatchDirectories) {
-        handleWatcherChanges(watchRegistry -> watchRegistry.updateMustWatchDirectories(mustWatchDirectories));
+        executorService.submit(
+            () -> handleWatcherChanges(watchRegistry -> watchRegistry.updateMustWatchDirectories(mustWatchDirectories))
+        );
     }
 
     @Override
