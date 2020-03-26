@@ -19,7 +19,6 @@ import org.gradle.gradlebuild.unittestandcompile.ModuleType
 
 plugins {
     `java-library`
-    gradlebuild.classycle
     gradlebuild.`publish-public-libraries`
     gradlebuild.`strict-compile`
 }
