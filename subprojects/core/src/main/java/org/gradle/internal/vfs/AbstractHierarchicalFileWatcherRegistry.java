@@ -43,16 +43,10 @@ public abstract class AbstractHierarchicalFileWatcherRegistry extends AbstractEv
         super(watcherCreator, watchFilter, handler);
     }
 
-
     @Override
-    protected void snapshotAdded(CompleteFileSystemLocationSnapshot snapshot) {
-        watchedSnapshots.put(snapshot.getAbsolutePath(), snapshot);
-        updateWatchedDirectories();
-    }
-
-    @Override
-    protected void snapshotRemoved(CompleteFileSystemLocationSnapshot snapshot) {
-        watchedSnapshots.remove(snapshot.getAbsolutePath());
+    protected void handleChanges(Collection<CompleteFileSystemLocationSnapshot> removedSnapshots, Collection<CompleteFileSystemLocationSnapshot> addedSnapshots) {
+        removedSnapshots.forEach(snapshot -> watchedSnapshots.remove(snapshot.getAbsolutePath()));
+        addedSnapshots.forEach(snapshot -> watchedSnapshots.put(snapshot.getAbsolutePath(), snapshot));
         updateWatchedDirectories();
     }
 

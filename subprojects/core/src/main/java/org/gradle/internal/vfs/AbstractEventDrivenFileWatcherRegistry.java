@@ -60,9 +60,10 @@ public abstract class AbstractEventDrivenFileWatcherRegistry implements FileWatc
 
     @Override
     public void changed(Collection<FileSystemNode> removedNodes, Collection<FileSystemNode> addedNodes) {
-        getAllSnapshots(removedNodes).forEach(this::snapshotRemoved);
-        getAllSnapshots(addedNodes).forEach(this::snapshotAdded);
+        handleChanges(getAllSnapshots(removedNodes), getAllSnapshots(addedNodes));
     }
+
+    protected abstract void handleChanges(Collection<CompleteFileSystemLocationSnapshot> removedSnapshots, Collection<CompleteFileSystemLocationSnapshot> addedSnapshots);
 
     private List<CompleteFileSystemLocationSnapshot> getAllSnapshots(Collection<FileSystemNode> nodes) {
         List<CompleteFileSystemLocationSnapshot> snapshots = new ArrayList<>();
@@ -78,10 +79,6 @@ public abstract class AbstractEventDrivenFileWatcherRegistry implements FileWatc
         ));
         return snapshots;
     }
-
-    protected abstract void snapshotAdded(CompleteFileSystemLocationSnapshot snapshot);
-
-    protected abstract void snapshotRemoved(CompleteFileSystemLocationSnapshot snapshot);
 
     private FileWatcher createWatcher(FileWatcherCreator watcherCreator, ChangeHandler handler) {
         return watcherCreator.createWatcher(new FileWatcherCallback() {
