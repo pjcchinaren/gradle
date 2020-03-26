@@ -20,7 +20,6 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileTree
 import org.gradle.api.internal.artifacts.transform.ConsumerProvidedVariantFiles
 import org.gradle.api.internal.artifacts.transform.TransformationNode
-import org.gradle.api.internal.file.AbstractFileCollection
 import org.gradle.api.internal.file.FileCollectionFactory
 import org.gradle.api.internal.file.FileCollectionInternal
 import org.gradle.api.internal.file.FileCollectionStructureVisitor
@@ -83,7 +82,8 @@ class FileCollectionCodec(
 }
 
 
-private class
+private
+class
 SubtractingFileCollectionSpec(val left: FileCollection, val right: FileCollection)
 
 
