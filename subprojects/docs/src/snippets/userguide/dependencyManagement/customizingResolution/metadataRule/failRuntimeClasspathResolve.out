@@ -3,7 +3,7 @@ Execution failed for task ':failRuntimeClasspathResolve'.
    > Could not resolve org.lwjgl:lwjgl:3.2.3.
      Required by:
          project :
-      > Cannot choose between the following variants of org.lwjgl:lwjgl:3.2.3:
+      > The consumer was configured to find attribute 'org.gradle.usage' with value 'java-runtime', attribute 'org.gradle.category' with value 'library', attribute 'org.gradle.libraryelements' with value 'jar', attribute 'org.gradle.dependency.bundling' with value 'external', attribute 'org.gradle.native.operatingSystem' with value 'windows', attribute 'org.gradle.jvm.version' with value '14'. However we cannot choose between the following variants of org.lwjgl:lwjgl:3.2.3:
           - natives-windows-runtime
           - natives-windows-x86-runtime
         All of them match the consumer attributes:
