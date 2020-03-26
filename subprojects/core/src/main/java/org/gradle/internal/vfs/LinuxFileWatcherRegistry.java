@@ -17,6 +17,7 @@
 package org.gradle.internal.vfs;
 
 import net.rubygrapefruit.platform.Native;
+import net.rubygrapefruit.platform.NativeException;
 import net.rubygrapefruit.platform.internal.jni.LinuxFileEventFunctions;
 import org.gradle.internal.snapshot.CompleteDirectorySnapshot;
 import org.gradle.internal.snapshot.CompleteFileSystemLocationSnapshot;
@@ -24,6 +25,7 @@ import org.gradle.internal.snapshot.FileSystemSnapshotVisitor;
 import org.gradle.internal.vfs.watch.FileWatcherRegistry;
 import org.gradle.internal.vfs.watch.FileWatcherRegistryFactory;
 import org.gradle.internal.vfs.watch.WatchRootUtil;
+import org.gradle.internal.vfs.watch.WatchingNotSupportedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,12 +116,19 @@ public class LinuxFileWatcherRegistry extends AbstractEventDrivenFileWatcherRegi
             return;
         }
         LOGGER.warn("Watching {} directory hierarchies to track changes", newWatchRoots.size());
-        getWatcher().startWatching(newWatchRoots.stream()
-            .map(File::new)
-            .collect(Collectors.toList()));
-        getWatcher().stopWatching(watchRootsToRemove.stream()
-            .map(File::new)
-            .collect(Collectors.toList()));
+        try {
+            getWatcher().startWatching(newWatchRoots.stream()
+                .map(File::new)
+                .collect(Collectors.toList()));
+            getWatcher().stopWatching(watchRootsToRemove.stream()
+                .map(File::new)
+                .collect(Collectors.toList()));
+        } catch (NativeException e) {
+            if (e.getMessage().contains("Already watching path: ")) {
+                throw new WatchingNotSupportedException("Unable to watch same file twice via different paths: " + e.getMessage(), e);
+            }
+            throw e;
+        }
         watchedRoots.addAll(newWatchRoots);
         watchedRoots.removeAll(watchRootsToRemove);
     }

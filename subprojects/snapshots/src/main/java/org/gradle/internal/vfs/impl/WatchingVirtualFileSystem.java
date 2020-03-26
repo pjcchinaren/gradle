@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
@@ -101,9 +102,7 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
 
     @Override
     public void updateMustWatchDirectories(Collection<File> mustWatchDirectories) {
-        if (watchRegistry != null) {
-            watchRegistry.updateMustWatchDirectories(mustWatchDirectories);
-        }
+        handleWatcherChanges(watchRegistry -> watchRegistry.updateMustWatchDirectories(mustWatchDirectories));
     }
 
     @Override
@@ -150,7 +149,7 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
                             }
                         };
                         getRoot().updateAndGet(root -> root.invalidate(absolutePath, changeListener));
-                        executorService.submit(() -> watchRegistry.changed(removedNodes, addedNodes));
+                        executorService.submit(() -> handleWatcherChanges(watchRegistry -> watchRegistry.changed(removedNodes, addedNodes)));
                     }
                 }
 
@@ -164,15 +163,27 @@ public class WatchingVirtualFileSystem extends AbstractDelegatingVirtualFileSyst
             listenerRegistration.addListener(changeListener);
             long endTime = System.currentTimeMillis() - startTime;
             LOGGER.warn("Spent {} ms registering watches for file system events", endTime);
-        } catch (WatchingNotSupportedException ex) {
-            // No stacktrace here, since this is a known shortcoming of our implementation
-            LOGGER.warn("Watching not supported, not tracking changes between builds: {}", ex.getMessage());
-            invalidateAll();
-            close();
         } catch (Exception ex) {
             LOGGER.error("Couldn't create watch service, not tracking changes between builds", ex);
             invalidateAll();
             close();
+        }
+    }
+
+    private void handleWatcherChanges(Consumer<FileWatcherRegistry> consumer) {
+        try {
+            if (watchRegistry != null) {
+                consumer.accept(watchRegistry);
+            }
+        } catch (WatchingNotSupportedException ex) {
+            // No stacktrace here, since this is a known shortcoming of our implementation
+            LOGGER.warn("Watching not supported, not tracking changes between builds: {}", ex.getMessage());
+            invalidateAll();
+            stopWatching();
+        } catch (Exception ex) {
+            LOGGER.error("Couldn't update watches, not watching anymore", ex);
+            invalidateAll();
+            stopWatching();
         }
     }
 

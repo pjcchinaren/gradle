@@ -627,7 +627,7 @@ class VirtualFileSystemRetentionIntegrationTest extends AbstractIntegrationSpec 
         then:
         skipped(":myTask")
         if (OperatingSystem.current().linux) {
-            postBuildOutputContains("Watching not supported, not tracking changes between builds: Unable to watch same file twice via different paths")
+            outputContains("Watching not supported, not tracking changes between builds: Unable to watch same file twice via different paths: Already watching path:")
         }
     }
 
