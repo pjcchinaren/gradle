@@ -24,14 +24,12 @@ import org.gradle.api.internal.SettingsInternal;
 import org.gradle.api.internal.initialization.ClassLoaderScope;
 import org.gradle.api.internal.initialization.ScriptHandlerFactory;
 import org.gradle.api.internal.initialization.ScriptHandlerInternal;
+import org.gradle.api.internal.plugins.PluginManagerInternal;
 import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.invocation.Gradle;
-import org.gradle.configuration.DefaultScriptTarget;
-import org.gradle.configuration.ScriptTarget;
 import org.gradle.groovy.scripts.BasicScript;
 import org.gradle.groovy.scripts.ScriptRunner;
 import org.gradle.groovy.scripts.ScriptSource;
-import org.gradle.groovy.scripts.internal.BuildScriptData;
 import org.gradle.groovy.scripts.internal.CompiledScript;
 import org.gradle.groovy.scripts.internal.ScriptRunnerFactory;
 import org.gradle.internal.resource.StringTextResource;
@@ -40,9 +38,6 @@ import org.gradle.internal.service.ServiceRegistry;
 import org.gradle.plugin.use.internal.PluginRequestApplicator;
 import org.gradle.plugin.use.internal.PluginsAwareScript;
 
-import javax.annotation.Nullable;
-
-@SuppressWarnings("unused")
 public class PreCompiledScriptRunner {
 
     private final Object target;
@@ -53,23 +48,24 @@ public class PreCompiledScriptRunner {
     private final PluginRequestApplicator pluginRequestApplicator;
 
     private final ClassLoaderScope classLoaderScope;
-    private final ClassLoader classLoader;
+    private final PluginManagerInternal pluginManager;
 
-    private final ScriptTarget scriptTarget;
-
+    @SuppressWarnings("unused")
     public PreCompiledScriptRunner(Project project) {
-        this(project, ((ProjectInternal) project).getServices(), ((ProjectInternal) project).getClassLoaderScope());
+        this(project, ((ProjectInternal) project).getServices(), ((ProjectInternal) project).getClassLoaderScope(), ((ProjectInternal) project).getPluginManager());
     }
 
+    @SuppressWarnings("unused")
     public PreCompiledScriptRunner(Settings settings) {
-        this(settings, ((SettingsInternal) settings).getGradle().getServices(), ((SettingsInternal) settings).getClassLoaderScope());
+        this(settings, ((SettingsInternal) settings).getGradle().getServices(), ((SettingsInternal) settings).getClassLoaderScope(), null);
     }
 
+    @SuppressWarnings("unused")
     public PreCompiledScriptRunner(Gradle gradle) {
-        this(gradle, ((GradleInternal) gradle).getServices(), ((GradleInternal) gradle).getClassLoaderScope().createChild("init-plugin"));
+        this(gradle, ((GradleInternal) gradle).getServices(), ((GradleInternal) gradle).getClassLoaderScope().createChild("init-plugin"), null);
     }
 
-    private PreCompiledScriptRunner(Object target, ServiceRegistry serviceRegistry, ClassLoaderScope classLoaderScope) {
+    private PreCompiledScriptRunner(Object target, ServiceRegistry serviceRegistry, ClassLoaderScope classLoaderScope, PluginManagerInternal pluginManager) {
         this.target = target;
         this.serviceRegistry = serviceRegistry;
 
@@ -78,59 +74,54 @@ public class PreCompiledScriptRunner {
         this.pluginRequestApplicator = serviceRegistry.get(PluginRequestApplicator.class);
 
         this.classLoaderScope = classLoaderScope;
-        this.classLoaderScope.lock();
-        this.classLoader = classLoaderScope.getExportClassLoader();
-
-        this.scriptTarget = new DefaultScriptTarget(target);
+        this.pluginManager = pluginManager;
     }
 
-    public void run(Class<?> pluginsBlockClass,
-                    Class<?> precompiledScriptClass,
-                    boolean scriptRunDoesSomething,
-                    boolean scriptHasMethods,
-                    boolean scriptHasImperativeStatements) {
-        ScriptSource scriptSource = new PrecompiledScriptSource(precompiledScriptClass);
+    public void run(Class<?> pluginsBlockClass, Class<?> precompiledScriptClass) {
+        classLoaderScope.lock();
 
         if (pluginsBlockClass != null) {
-            CompiledScript<PluginsAwareScript, BuildScriptData> compiledPlugins = new CompiledGroovyPlugin<>(pluginsBlockClass, PluginsAwareScript.class, classLoaderScope, true, false, false);
-            ScriptRunner<PluginsAwareScript, BuildScriptData> runner = scriptRunnerFactory.create(compiledPlugins, scriptSource, classLoader);
-            runner.run(target, serviceRegistry);
-
-            ScriptHandlerInternal scriptHandler = scriptHandlerFactory.create(scriptSource, classLoaderScope);
-            pluginRequestApplicator.applyPlugins(runner.getScript().getPluginRequests(), scriptHandler, scriptTarget.getPluginManager(), classLoaderScope);
+            applyPlugins(pluginsBlockClass);
         }
 
-        CompiledScript<BasicScript, BuildScriptData> compiledScript =
-            new CompiledGroovyPlugin<>(precompiledScriptClass, BasicScript.class, classLoaderScope, scriptRunDoesSomething, scriptHasMethods, scriptHasImperativeStatements);
-        ScriptRunner<? extends BasicScript, BuildScriptData> runner = scriptRunnerFactory.create(compiledScript, scriptSource, classLoader);
+        if (precompiledScriptClass != null) {
+            executeScript(precompiledScriptClass);
+        }
+    }
+
+    private void applyPlugins(Class<?> pluginsBlockClass) {
+        ScriptSource scriptSource = new PrecompiledScriptSource(pluginsBlockClass);
+        CompiledScript<PluginsAwareScript, ?> compiledPlugins = new CompiledGroovyPlugin<>(pluginsBlockClass, PluginsAwareScript.class);
+        ScriptRunner<PluginsAwareScript, ?> runner = scriptRunnerFactory.create(compiledPlugins, scriptSource, classLoaderScope.getExportClassLoader());
+        runner.run(target, serviceRegistry);
+
+        ScriptHandlerInternal scriptHandler = scriptHandlerFactory.create(scriptSource, classLoaderScope);
+        pluginRequestApplicator.applyPlugins(runner.getScript().getPluginRequests(), scriptHandler, pluginManager, classLoaderScope);
+    }
+
+    private void executeScript(Class<?> precompiledScriptClass) {
+        ScriptSource scriptSource = new PrecompiledScriptSource(precompiledScriptClass);
+        CompiledScript<BasicScript, ?> compiledScript = new CompiledGroovyPlugin<>(precompiledScriptClass, BasicScript.class);
+        ScriptRunner<? extends BasicScript, ?> runner = scriptRunnerFactory.create(compiledScript, scriptSource, classLoaderScope.getExportClassLoader());
         runner.run(target, serviceRegistry);
     }
 
-    private static class CompiledGroovyPlugin<T extends Script> implements CompiledScript<T, BuildScriptData> {
+    private class CompiledGroovyPlugin<T extends Script> implements CompiledScript<T, Object> {
 
         private final Class<? extends T> compiledClass;
-        private final ClassLoaderScope scope;
-        private final boolean runDoesSomething;
-        private final boolean hasMethods;
-        private final boolean hasImperativeStatements;
 
-        private CompiledGroovyPlugin(Class<?> scriptClass, Class<T> scriptBaseClass, ClassLoaderScope scope,
-                                     boolean runDoesSomething, boolean hasMethods, boolean hasImperativeStatements) {
+        private CompiledGroovyPlugin(Class<?> scriptClass, Class<T> scriptBaseClass) {
             this.compiledClass = scriptClass.asSubclass(scriptBaseClass);
-            this.scope = scope;
-            this.runDoesSomething = runDoesSomething;
-            this.hasMethods = hasMethods;
-            this.hasImperativeStatements = hasImperativeStatements;
         }
 
         @Override
         public boolean getRunDoesSomething() {
-            return runDoesSomething;
+            return true;
         }
 
         @Override
         public boolean getHasMethods() {
-            return hasMethods;
+            return false;
         }
 
         @Override
@@ -139,13 +130,13 @@ public class PreCompiledScriptRunner {
         }
 
         @Override
-        public BuildScriptData getData() {
-            return new BuildScriptData(hasImperativeStatements);
+        public Object getData() {
+            return null;
         }
 
         @Override
         public void onReuse() {
-            scope.onReuse();
+            classLoaderScope.onReuse();
         }
     }
 
@@ -167,10 +158,9 @@ public class PreCompiledScriptRunner {
             return new StringTextResource(scriptClass.getSimpleName(), "");
         }
 
-        @Nullable
         @Override
         public String getFileName() {
-            return null;
+            return scriptClass.getSimpleName() + ".class";
         }
 
         @Override

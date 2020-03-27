@@ -100,11 +100,6 @@ class PreCompileGroovyScriptsTask extends DefaultTask {
         return outputDir;
     }
 
-    @OutputDirectory
-    DirectoryProperty getBaseClassOutputDir() {
-        return classesDir;
-    }
-
     @Nonnull
     @OutputDirectory
     DirectoryProperty getGeneratedClassesDir() {
@@ -123,6 +118,7 @@ class PreCompileGroovyScriptsTask extends DefaultTask {
         }
 
         getProject().copy(copySpec -> {
+            copySpec.from(metadataDir.getAsFile().get());
             copySpec.with(classesSpec);
             copySpec.into(outputDir);
         });
@@ -165,8 +161,9 @@ class PreCompileGroovyScriptsTask extends DefaultTask {
                                              CompiledScript<? extends BasicScript, ?> buildScript) {
         String targetClass = scriptPlugin.getTargetClass().getName();
         File outputFile = generatedClassesDir.file(scriptPlugin.getGeneratedPluginClassName() + ".java").get().getAsFile();
-        String pluginsBlockClass = pluginsBlock.getRunDoesSomething() ? "Class.forName(\"" + pluginsBlock.loadClass().getName() + "\")" : null;
-        boolean buildScriptHasImperativeStatements = buildScript.getData() != null && ((BuildScriptData) buildScript.getData()).getHasImperativeStatements();
+
+        String pluginsBlockClass = pluginsBlock.getRunDoesSomething() ? "Class.forName(\"" + scriptPlugin.getPluginsBlockClassName() + "\")" : null;
+        String buildScriptClass = buildScript.getRunDoesSomething() ? "Class.forName(\"" + scriptPlugin.getClassName() + "\")" : null;
 
         try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(outputFile.toURI()))) {
             writer.write("import " + targetClass + ";\n");
@@ -177,16 +174,13 @@ class PreCompileGroovyScriptsTask extends DefaultTask {
             writer.write("  public void apply(" + targetClass + " target) {\n");
             writer.write("      try {\n");
             writer.write("          Class<?> pluginsBlockClass = " + pluginsBlockClass + ";\n");
-            writer.write("          Class<?> precompiledScriptClass = Class.forName(\"" + scriptPlugin.getClassName() + "\");\n");
+            writer.write("          Class<?> precompiledScriptClass = " + buildScriptClass + ";\n");
             writer.write("          new " + PreCompiledScriptRunner.class.getName() + "(target)\n");
             writer.write("              .run(\n");
             writer.write("                  pluginsBlockClass,\n");
-            writer.write("                  precompiledScriptClass,\n");
-            writer.write("                  " + buildScript.getRunDoesSomething() + ",\n");
-            writer.write("                  " + buildScript.getHasMethods() + ",\n");
-            writer.write("                  " + buildScriptHasImperativeStatements + "\n");
+            writer.write("                  precompiledScriptClass\n");
             writer.write("              );\n");
-            writer.write("      } catch (ClassNotFoundException e) { throw new RuntimeException(e); }\n");
+            writer.write("      } catch (Exception e) { throw new RuntimeException(e); }\n");
             writer.write("  }\n");
             writer.write("}\n");
         } catch (IOException e) {
